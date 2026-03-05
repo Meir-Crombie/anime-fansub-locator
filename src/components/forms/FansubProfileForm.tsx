@@ -58,7 +58,7 @@ export default function FansubProfileForm({ defaultValues }: FansubProfileFormPr
       activity_status:      'active',
       translation_domains:  [],
       flagship_projects:    '',
-      is_recruiting:        false,
+      is_recruiting:        defaultValues?.is_recruiting ?? false,
       recruiting_roles:     [],
       recruitment_contact:  '',
       submitter_name:       '',

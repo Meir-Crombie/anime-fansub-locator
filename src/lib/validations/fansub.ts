@@ -39,7 +39,7 @@ export const fansubProfileSchema = z
   .object({
     // Section 1 — General
     name: z
-      .string({ required_error: 'שם הקבוצה הוא שדה חובה' })
+      .string()
       .min(2, { message: 'שם הקבוצה חייב להכיל לפחות 2 תווים' })
       .max(255, { message: 'שם הקבוצה ארוך מדי' }),
 
@@ -48,7 +48,7 @@ export const fansubProfileSchema = z
     established_year: z
       .union([
         z
-          .number({ invalid_type_error: 'שנת הקמה חייבת להיות מספר' })
+          .number({ error: 'שנת הקמה חייבת להיות מספר' })
           .int()
           .min(1990, { message: 'שנת הקמה מינימלית היא 1990' })
           .max(currentYear, { message: `שנת הקמה מקסימלית היא ${currentYear}` }),
@@ -59,7 +59,7 @@ export const fansubProfileSchema = z
       .optional(),
 
     description: z
-      .string({ required_error: 'תיאור הקבוצה הוא שדה חובה' })
+      .string()
       .min(10, { message: 'התיאור חייב להכיל לפחות 10 תווים' }),
 
     website_url:  optionalUrl,
@@ -67,9 +67,9 @@ export const fansubProfileSchema = z
     telegram_url: optionalUrl,
 
     // Section 2 — Activity
-    activity_status: z.enum(['active', 'on_break', 'inactive'], {
-      required_error: 'יש לבחור סטטוס פעילות',
-    }),
+    activity_status: z
+      .enum(['active', 'on_break', 'inactive'])
+      .refine((v) => v !== undefined, { message: 'יש לבחור סטטוס פעילות' }),
 
     translation_domains: z
       .array(z.string())
@@ -82,7 +82,7 @@ export const fansubProfileSchema = z
       .or(z.literal('')),
 
     // Section 3 — Recruiting
-    is_recruiting: z.boolean().default(false),
+    is_recruiting: z.boolean(),
 
     recruiting_roles: z.array(z.string()).optional(),
 
@@ -94,17 +94,17 @@ export const fansubProfileSchema = z
 
     // Section 4 — Internal verification
     submitter_name: z
-      .string({ required_error: 'שם/כינוי הוא שדה חובה' })
+      .string()
       .min(1, { message: 'שם/כינוי הוא שדה חובה' })
       .max(255),
 
     submitter_role: z
-      .string({ required_error: 'תפקיד בקבוצה הוא שדה חובה' })
+      .string()
       .min(1, { message: 'תפקיד בקבוצה הוא שדה חובה' })
       .max(255),
 
     submitter_contact: z
-      .string({ required_error: 'פרטי יצירת קשר הם שדה חובה' })
+      .string()
       .min(1, { message: 'פרטי יצירת קשר הם שדה חובה' })
       .max(255),
   })
