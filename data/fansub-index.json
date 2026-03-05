@@ -1,0 +1,105 @@
+[
+  {
+    "malId": 16498,
+    "title": "Shingeki no Kyojin",
+    "titleHebrew": "מתקפת הטיטאנים",
+    "fansubGroup": "AnimeHebrewSubs",
+    "type": "anime",
+    "status": "completed",
+    "episodesCovered": "1-25",
+    "releaseUrl": "https://example.com/aot",
+    "lastUpdated": "2024-01-15"
+  },
+  {
+    "malId": 20,
+    "title": "Naruto",
+    "titleHebrew": "נארוטו",
+    "fansubGroup": "FanSub-IL",
+    "type": "anime",
+    "status": "completed",
+    "episodesCovered": "all",
+    "lastUpdated": "2023-08-10"
+  },
+  {
+    "malId": 21,
+    "title": "One Piece",
+    "titleHebrew": "וואן פיס",
+    "fansubGroup": "FanSub-IL",
+    "type": "anime",
+    "status": "ongoing",
+    "episodesCovered": "1-800",
+    "lastUpdated": "2024-11-01"
+  },
+  {
+    "malId": 1535,
+    "title": "Death Note",
+    "titleHebrew": "פנקס המוות",
+    "fansubGroup": "AnimeHebrewSubs",
+    "type": "anime",
+    "status": "completed",
+    "episodesCovered": "all",
+    "releaseUrl": "https://example.com/deathnote",
+    "lastUpdated": "2022-05-20"
+  },
+  {
+    "malId": 38000,
+    "title": "Kimetsu no Yaiba",
+    "titleHebrew": "חרב ממית שד",
+    "fansubGroup": "SabSubs",
+    "type": "anime",
+    "status": "ongoing",
+    "episodesCovered": "1-44",
+    "lastUpdated": "2024-09-30"
+  },
+  {
+    "malId": 11061,
+    "title": "Hunter x Hunter (2011)",
+    "titleHebrew": "הנטר הנטר",
+    "fansubGroup": "FanSub-IL",
+    "type": "anime",
+    "status": "completed",
+    "episodesCovered": "all",
+    "lastUpdated": "2023-02-14"
+  },
+  {
+    "malId": 23755,
+    "title": "Shigatsu wa Kimi no Uso",
+    "titleHebrew": "השקר שלך באפריל",
+    "fansubGroup": "AnimeHebrewSubs",
+    "type": "anime",
+    "status": "completed",
+    "episodesCovered": "all",
+    "lastUpdated": "2022-11-05"
+  },
+  {
+    "malId": 13601,
+    "title": "Sword Art Online",
+    "titleHebrew": "אמנות החרב אונליין",
+    "fansubGroup": "SabSubs",
+    "type": "anime",
+    "status": "completed",
+    "episodesCovered": "1-25",
+    "lastUpdated": "2023-07-18"
+  },
+  {
+    "malId": 44511,
+    "title": "Bleach: Sennen Kessen-hen",
+    "titleHebrew": "בליץ׳: מלחמת אלף השנה",
+    "fansubGroup": "AnimeHebrewSubs",
+    "type": "anime",
+    "status": "ongoing",
+    "episodesCovered": "1-13",
+    "lastUpdated": "2024-10-15"
+  },
+  {
+    "malId": 3741,
+    "title": "Fullmetal Alchemist: Brotherhood",
+    "titleHebrew": "פולמטאל אלכימיסט: ברות׳רהוד",
+    "fansubGroup": "FanSub-IL",
+    "type": "anime",
+    "status": "completed",
+    "episodesCovered": "all",
+    "releaseUrl": "https://example.com/fma",
+    "lastUpdated": "2021-12-01"
+  }
+]
