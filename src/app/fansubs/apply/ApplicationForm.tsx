@@ -87,6 +87,17 @@ export default function ApplicationForm({ fields }: ApplicationFormProps) {
     )
   }
 
+  if (fields.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center space-y-4">
+          <p className="text-muted-foreground">טופס ההרשמה אינו מוגדר עדיין. נסה שוב מאוחר יותר.</p>
+          <Button variant="outline" onClick={() => router.back()}>חזרה</Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card>
       <CardContent className="py-6">

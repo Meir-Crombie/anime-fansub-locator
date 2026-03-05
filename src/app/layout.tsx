@@ -3,6 +3,7 @@ import { Heebo, Inter } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import Navbar from '@/components/Navbar'
 import { Toaster } from '@/components/ui/toaster'
+import { createServerClient } from '@/lib/supabase/server'
 import './globals.css'
 
 const heebo = Heebo({
@@ -29,17 +30,37 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const supabase = createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let initialRole: string | null = null
+  let initialEmail: string | null = null
+
+  if (user) {
+    initialEmail = user.email ?? null
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    initialRole = profile?.role ?? null
+  }
+
   return (
     <html lang="he" dir="rtl" className={`${heebo.variable} ${inter.variable}`} suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground font-heebo antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <div className="min-h-screen flex flex-col">
-            <Navbar />
+            <Navbar
+              initialLoggedIn={!!user}
+              initialEmail={initialEmail}
+              initialRole={initialRole}
+            />
             <main className="flex-1">{children}</main>
           </div>
           <Toaster />

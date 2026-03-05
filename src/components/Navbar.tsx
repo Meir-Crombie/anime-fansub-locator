@@ -39,13 +39,21 @@ const ADMIN_NAV_LINKS: { href: string; label: string; icon: typeof Shield }[] = 
   { href: '/admin/form-builder', label: 'טופס בקשה', icon: Settings },
 ]
 
-export default function Navbar() {
+interface NavbarProps {
+  initialLoggedIn?: boolean
+  initialEmail?: string | null
+  initialRole?: string | null
+}
+
+export default function Navbar({ initialLoggedIn, initialEmail, initialRole }: NavbarProps) {
   const { theme, setTheme } = useTheme()
   const router = useRouter()
   const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
-  const [role, setRole] = useState<string | null>(null)
+  const [role, setRole] = useState<string | null>(initialRole ?? null)
   const [mounted, setMounted] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(initialLoggedIn ?? false)
+  const [email, setEmail] = useState(initialEmail ?? null)
 
   useEffect(() => {
     setMounted(true)
@@ -53,13 +61,17 @@ export default function Navbar() {
 
     supabase.auth.getUser().then(({ data: { user: u } }) => {
       setUser(u)
+      setIsLoggedIn(!!u)
+      setEmail(u?.email ?? null)
       if (u) {
         supabase
           .from('profiles')
           .select('role')
           .eq('id', u.id)
           .single()
-          .then(({ data }) => setRole(data?.role ?? null))
+          .then(({ data }) => {
+            if (data?.role) setRole(data.role)
+          })
       }
     })
 
@@ -67,13 +79,17 @@ export default function Navbar() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      setIsLoggedIn(!!session?.user)
+      setEmail(session?.user?.email ?? null)
       if (session?.user) {
         supabase
           .from('profiles')
           .select('role')
           .eq('id', session.user.id)
           .single()
-          .then(({ data }) => setRole(data?.role ?? null))
+          .then(({ data }) => {
+            if (data?.role) setRole(data.role)
+          })
       } else {
         setRole(null)
       }
@@ -91,6 +107,8 @@ export default function Navbar() {
 
   const isAdmin = role === 'admin'
   const isManager = role === 'manager'
+  const loggedIn = user ? true : isLoggedIn
+  const displayEmail = user?.email ?? email
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
@@ -119,7 +137,7 @@ export default function Navbar() {
           ))}
 
           {/* Management dropdown for admin/manager - visible in desktop nav */}
-          {user && (isAdmin || isManager) && (
+          {loggedIn && (isAdmin || isManager) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -197,20 +215,20 @@ export default function Navbar() {
           )}
 
           {/* Auth state */}
-          {user ? (
+          {loggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      {user.email?.charAt(0).toUpperCase() ?? 'U'}
+                      {displayEmail?.charAt(0).toUpperCase() ?? 'U'}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
                 <DropdownMenuLabel className="font-normal">
-                  <p className="text-xs text-muted-foreground" dir="ltr">{user.email}</p>
+                  <p className="text-xs text-muted-foreground" dir="ltr">{displayEmail}</p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2">
@@ -250,7 +268,7 @@ export default function Navbar() {
                 ))}
 
                 {/* Manager/Admin mobile section */}
-                {user && (isAdmin || isManager) && (
+                {loggedIn && (isAdmin || isManager) && (
                   <>
                     <Separator className="my-2" />
                     <p className="text-xs text-muted-foreground px-3 font-medium">הקבוצה שלי</p>
@@ -281,7 +299,7 @@ export default function Navbar() {
                   </>
                 )}
 
-                {user && isAdmin && (
+                {loggedIn && isAdmin && (
                   <>
                     <Separator className="my-2" />
                     <p className="text-xs text-muted-foreground px-3 font-medium">ניהול מערכת</p>
