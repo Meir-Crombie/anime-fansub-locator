@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
-import { Sun, Moon, Menu, LogOut, LayoutDashboard } from 'lucide-react'
+import { Sun, Moon, Menu, LogOut, LayoutDashboard, Shield, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -20,24 +21,46 @@ import type { User } from '@supabase/supabase-js'
 const NAV_LINKS = [
   { href: '/', label: 'דף הבית' },
   { href: '/search', label: 'אנימות' },
-] as const
+  { href: '/fansubs', label: 'קבוצות' },
+]
 
 export default function Navbar() {
   const { theme, setTheme } = useTheme()
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
+  const [role, setRole] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
     const supabase = createClient()
 
-    supabase.auth.getUser().then(({ data: { user: u } }) => setUser(u))
+    supabase.auth.getUser().then(({ data: { user: u } }) => {
+      setUser(u)
+      if (u) {
+        supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', u.id)
+          .single()
+          .then(({ data }) => setRole(data?.role ?? null))
+      }
+    })
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => setRole(data?.role ?? null))
+      } else {
+        setRole(null)
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -103,12 +126,38 @@ export default function Navbar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard" className="flex items-center gap-2">
-                    <LayoutDashboard className="h-4 w-4" />
-                    <span>לוח בקרה</span>
-                  </Link>
-                </DropdownMenuItem>
+                {(role === 'manager' || role === 'admin') && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard" className="flex items-center gap-2">
+                      <LayoutDashboard className="h-4 w-4" />
+                      <span>הקבוצה שלי</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                {role === 'admin' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        <span>ניהול מערכת</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/analytics" className="flex items-center gap-2">
+                        <span className="h-4 w-4 text-center text-xs">📊</span>
+                        <span>אנליטיקה</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/applications" className="flex items-center gap-2">
+                        <span className="h-4 w-4 text-center text-xs">📋</span>
+                        <span>בקשות</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2">
                   <LogOut className="h-4 w-4" />
                   <span>התנתקות</span>
@@ -139,6 +188,18 @@ export default function Navbar() {
                     {link.label}
                   </Link>
                 ))}
+                {user && (role === 'manager' || role === 'admin') && (
+                  <Link href="/dashboard" className="text-lg hover:text-primary transition-colors flex items-center gap-2">
+                    <LayoutDashboard className="h-4 w-4" />
+                    הקבוצה שלי
+                  </Link>
+                )}
+                {user && role === 'admin' && (
+                  <Link href="/admin" className="text-lg hover:text-primary transition-colors flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    ניהול מערכת
+                  </Link>
+                )}
               </nav>
             </SheetContent>
           </Sheet>

@@ -1,50 +1,84 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { ExternalLink, Send, MessageSquare } from 'lucide-react'
+import { ExternalLink, Send, MessageSquare, Star } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { FansubGroup } from '@/lib/types'
 
 interface FansubCardProps {
-  fansub: FansubGroup
+  fansub: FansubGroup & { translations?: { count: number }[] }
 }
 
 export default function FansubCard({ fansub }: FansubCardProps) {
+  const avgRating = fansub.rating_count > 0
+    ? (fansub.rating_total / fansub.rating_count).toFixed(1)
+    : null
+
+  const translationCount = fansub.translations?.[0]?.count ?? null
+
+  const yearsActive = fansub.founded_at
+    ? Math.floor(
+        (Date.now() - new Date(fansub.founded_at).getTime()) /
+          (365.25 * 24 * 60 * 60 * 1000)
+      )
+    : null
+
   return (
-    <Card className="overflow-hidden transition-shadow hover:shadow-lg">
-      <CardHeader className="flex flex-row items-center gap-4 pb-3">
-        <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-          {fansub.logo_url ? (
-            <Image
-              src={fansub.logo_url}
-              alt={fansub.name}
-              fill
-              sizes="48px"
-              className="object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-primary/10 text-primary font-bold text-lg">
-              {fansub.name.charAt(0)}
-            </div>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <CardTitle className="text-base truncate">
-            <Link
-              href={`/fansub/${fansub.id}`}
-              className="hover:text-primary transition-colors"
-            >
-              {fansub.name}
-            </Link>
-          </CardTitle>
-          {fansub.description && (
-            <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
-              {fansub.description}
-            </p>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
+    <Card className="overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-[1.02]">
+      <Link href={`/fansub/${fansub.id}`} className="block">
+        <CardHeader className="flex flex-row items-center gap-4 pb-3">
+          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+            {fansub.logo_url ? (
+              <Image
+                src={fansub.logo_url}
+                alt={fansub.name}
+                fill
+                sizes="64px"
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-primary/10 text-primary font-bold text-xl">
+                {fansub.name.charAt(0)}
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-lg truncate">{fansub.name}</CardTitle>
+            {fansub.description && (
+              <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
+                {fansub.description.length > 80
+                  ? fansub.description.slice(0, 80) + '...'
+                  : fansub.description}
+              </p>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-3">
+          {/* Stats row */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {avgRating ? (
+              <div className="flex items-center gap-1 text-sm">
+                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" aria-hidden />
+                <span className="font-medium">{avgRating}</span>
+                <span className="text-muted-foreground">({fansub.rating_count})</span>
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground">אין דירוג עדיין</span>
+            )}
+            {translationCount !== null && (
+              <Badge variant="secondary">{translationCount} תרגומים</Badge>
+            )}
+            {yearsActive !== null && yearsActive > 0 && (
+              <span className="text-xs text-muted-foreground">
+                פעילים {yearsActive} שנים
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Link>
+      {/* Platform buttons outside the Link to avoid nested anchors */}
+      <CardContent className="pt-0 pb-4">
         <div className="flex flex-wrap gap-2">
           {fansub.website_url && (
             <Button variant="outline" size="sm" asChild>

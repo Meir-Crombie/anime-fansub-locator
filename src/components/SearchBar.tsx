@@ -3,10 +3,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Search, Loader2 } from 'lucide-react'
+import { Search, Loader2, Users } from 'lucide-react'
 import { SEARCH_MIN_LENGTH, SEARCH_DEBOUNCE_MS } from '@/lib/constants'
 
-interface SearchResult {
+type SearchMode = 'anime' | 'fansub'
+
+interface AnimeResult {
   id: string
   title_he: string
   title_en: string
@@ -15,10 +17,19 @@ interface SearchResult {
   similarity: number
 }
 
+interface FansubResult {
+  id: string
+  name: string
+  logo_url: string | null
+  similarity: number
+}
+
 export default function SearchBar() {
   const router = useRouter()
+  const [mode, setMode] = useState<SearchMode>('anime')
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SearchResult[]>([])
+  const [animeResults, setAnimeResults] = useState<AnimeResult[]>([])
+  const [fansubResults, setFansubResults] = useState<FansubResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
@@ -39,7 +50,8 @@ export default function SearchBar() {
 
   const performSearch = useCallback(async (searchQuery: string) => {
     if (searchQuery.length < SEARCH_MIN_LENGTH) {
-      setResults([])
+      setAnimeResults([])
+      setFansubResults([])
       setIsOpen(false)
       return
     }
@@ -48,7 +60,8 @@ export default function SearchBar() {
     setError(null)
 
     try {
-      const res = await fetch('/api/search', {
+      const endpoint = mode === 'anime' ? '/api/search' : '/api/search-fansubs'
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: searchQuery }),
@@ -58,18 +71,25 @@ export default function SearchBar() {
 
       if (!res.ok || json.error) {
         setError(json.error ?? 'שגיאה בחיפוש')
-        setResults([])
+        setAnimeResults([])
+        setFansubResults([])
+      } else if (mode === 'anime') {
+        setAnimeResults(json.data ?? [])
+        setFansubResults([])
+        setIsOpen(true)
       } else {
-        setResults(json.data ?? [])
+        setFansubResults(json.data ?? [])
+        setAnimeResults([])
         setIsOpen(true)
       }
     } catch {
       setError('שגיאת רשת. נסה שוב.')
-      setResults([])
+      setAnimeResults([])
+      setFansubResults([])
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [mode])
 
   function handleChange(value: string) {
     setQuery(value)
@@ -78,7 +98,8 @@ export default function SearchBar() {
     if (timerRef.current) clearTimeout(timerRef.current)
 
     if (value.trim().length === 0) {
-      setResults([])
+      setAnimeResults([])
+      setFansubResults([])
       setIsOpen(false)
       setError(null)
       return
@@ -89,10 +110,24 @@ export default function SearchBar() {
     }, SEARCH_DEBOUNCE_MS)
   }
 
+  const results = mode === 'anime' ? animeResults : fansubResults
+
   function selectResult(id: string) {
     setIsOpen(false)
     setQuery('')
-    router.push(`/anime/${id}`)
+    router.push(mode === 'anime' ? `/anime/${id}` : `/fansub/${id}`)
+  }
+
+  function handleModeChange(newMode: SearchMode) {
+    setMode(newMode)
+    setAnimeResults([])
+    setFansubResults([])
+    setIsOpen(false)
+    setSelectedIndex(-1)
+    if (query.trim().length >= SEARCH_MIN_LENGTH) {
+      // Re-search with the new mode after state update
+      setTimeout(() => performSearch(query.trim()), 0)
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -128,6 +163,32 @@ export default function SearchBar() {
 
   return (
     <div ref={containerRef} className="relative w-full max-w-2xl mx-auto">
+      {/* Mode tabs */}
+      <div className="flex gap-1 mb-2 justify-center">
+        <button
+          onClick={() => handleModeChange('anime')}
+          className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            mode === 'anime'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Search className="h-3.5 w-3.5 inline me-1" aria-hidden />
+          אנימה
+        </button>
+        <button
+          onClick={() => handleModeChange('fansub')}
+          className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            mode === 'fansub'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Users className="h-3.5 w-3.5 inline me-1" aria-hidden />
+          קבוצות
+        </button>
+      </div>
+
       <div className="relative flex items-center">
         <div className="absolute end-4 top-1/2 -translate-y-1/2 pointer-events-none">
           {isLoading ? (
@@ -143,8 +204,8 @@ export default function SearchBar() {
           onChange={(e) => handleChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setIsOpen(true)}
-          placeholder="חפש אנימה בעברית, אנגלית או ביפנית..."
-          aria-label="חיפוש אנימה"
+          placeholder={mode === 'anime' ? 'חפש אנימה בעברית, אנגלית או ביפנית...' : 'חפש קבוצת פאנסאב...'}
+          aria-label={mode === 'anime' ? 'חיפוש אנימה' : 'חיפוש קבוצת פאנסאב'}
           className="w-full rounded-2xl border border-border bg-card/80 pe-12 ps-5 py-4 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 backdrop-blur-sm"
         />
       </div>
@@ -176,25 +237,49 @@ export default function SearchBar() {
                     index === selectedIndex ? 'bg-accent' : 'hover:bg-accent/50'
                   }`}
                 >
-                  <div className="relative h-10 w-7 flex-shrink-0 overflow-hidden rounded bg-muted">
-                    {result.cover_image_url ? (
-                      <Image
-                        src={result.cover_image_url}
-                        alt=""
-                        fill
-                        sizes="28px"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-muted" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">{result.title_he}</p>
-                    <p className="text-xs text-muted-foreground truncate anime-title">
-                      {result.title_en}
-                    </p>
-                  </div>
+                  {mode === 'anime' ? (
+                    <>
+                      <div className="relative h-10 w-7 flex-shrink-0 overflow-hidden rounded bg-muted">
+                        {(result as AnimeResult).cover_image_url ? (
+                          <Image
+                            src={(result as AnimeResult).cover_image_url!}
+                            alt=""
+                            fill
+                            sizes="28px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-muted" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{(result as AnimeResult).title_he}</p>
+                        <p className="text-xs text-muted-foreground truncate anime-title">
+                          {(result as AnimeResult).title_en}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-muted">
+                        {(result as FansubResult).logo_url ? (
+                          <Image
+                            src={(result as FansubResult).logo_url!}
+                            alt=""
+                            fill
+                            sizes="32px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{(result as FansubResult).name}</p>
+                      </div>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
