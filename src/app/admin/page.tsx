@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import EmptyState from '@/components/EmptyState'
 import Link from 'next/link'
+import type { Route } from 'next'
 import { Film, Users, Languages, Search, FileText } from 'lucide-react'
 
 export default async function AdminOverviewPage() {
@@ -36,11 +37,11 @@ export default async function AdminOverviewPage() {
       .limit(5),
   ])
 
-  const stats: { label: string; value: number; icon: typeof Film; href: string }[] = [
-    { label: 'אנימות', value: animeCount ?? 0, icon: Film, href: '/admin/animes' },
-    { label: 'קבוצות', value: fansubCount ?? 0, icon: Users, href: '/admin/fansubs' },
-    { label: 'תרגומים', value: translationCount ?? 0, icon: Languages, href: '#' },
-    { label: 'בקשות ממתינות', value: pendingAppCount ?? 0, icon: FileText, href: '/admin/applications' },
+  const stats = [
+    { label: 'אנימות', value: animeCount ?? 0, icon: Film, href: '/admin/animes' as Route },
+    { label: 'קבוצות', value: fansubCount ?? 0, icon: Users, href: '/admin/fansubs' as Route },
+    { label: 'תרגומים', value: translationCount ?? 0, icon: Languages, href: '#' as Route },
+    { label: 'בקשות ממתינות', value: pendingAppCount ?? 0, icon: FileText, href: '/admin/applications' as Route },
   ]
 
   return (
@@ -50,7 +51,7 @@ export default async function AdminOverviewPage() {
       {/* Stats Grid */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {stats.map((stat) => (
-          <Link key={stat.label} href={stat.href as never}>
+          <Link key={stat.label} href={stat.href}>
             <Card className="hover:border-primary transition-colors">
               <CardContent className="py-4 flex items-center gap-3">
                 <stat.icon className="h-8 w-8 text-muted-foreground" aria-hidden />
