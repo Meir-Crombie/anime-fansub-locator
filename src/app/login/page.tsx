@@ -15,14 +15,13 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
-
   async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
     setMessage(null)
 
+    const supabase = createClient()
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -42,6 +41,7 @@ export default function LoginPage() {
     setIsGoogleLoading(true)
     setError(null)
 
+    const supabase = createClient()
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
