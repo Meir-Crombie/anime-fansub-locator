@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
-import { Sun, Moon, Menu, LogOut, LayoutDashboard, Shield, Users } from 'lucide-react'
+import {
+  Sun, Moon, Menu, LogOut, LayoutDashboard, Shield,
+  BarChart3, FileText, Settings, Film, Users, ClipboardList,
+} from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,20 +16,33 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
 import type { User } from '@supabase/supabase-js'
 
-const NAV_LINKS = [
+const NAV_LINKS: { href: string; label: string }[] = [
   { href: '/', label: 'דף הבית' },
   { href: '/search', label: 'אנימות' },
   { href: '/fansubs', label: 'קבוצות' },
 ]
 
+const ADMIN_NAV_LINKS: { href: string; label: string; icon: typeof Shield }[] = [
+  { href: '/admin', label: 'סקירה', icon: LayoutDashboard },
+  { href: '/admin/animes', label: 'אנימות', icon: Film },
+  { href: '/admin/fansubs', label: 'קבוצות', icon: Users },
+  { href: '/admin/applications', label: 'בקשות', icon: ClipboardList },
+  { href: '/admin/analytics', label: 'אנליטיקה', icon: BarChart3 },
+  { href: '/admin/form-builder', label: 'טופס בקשה', icon: Settings },
+]
+
 export default function Navbar() {
   const { theme, setTheme } = useTheme()
   const router = useRouter()
+  const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
   const [role, setRole] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -73,6 +89,9 @@ export default function Navbar() {
     router.push('/')
   }
 
+  const isAdmin = role === 'admin'
+  const isManager = role === 'manager'
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <nav className="container mx-auto flex h-14 items-center justify-between px-4">
@@ -87,12 +106,76 @@ export default function Navbar() {
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
-              href={link.href}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              href={link.href as never}
+              className={cn(
+                'text-sm transition-colors',
+                pathname === link.href
+                  ? 'text-foreground font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
             >
               {link.label}
             </Link>
           ))}
+
+          {/* Management dropdown for admin/manager - visible in desktop nav */}
+          {user && (isAdmin || isManager) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={cn(
+                    'flex items-center gap-1.5 text-sm transition-colors',
+                    pathname.startsWith('/admin') || pathname.startsWith('/dashboard')
+                      ? 'text-foreground font-medium'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <Shield className="h-4 w-4" />
+                  <span>ניהול</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                {/* Manager section — visible to both admin and manager */}
+                {(isAdmin || isManager) && (
+                  <>
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">
+                      הקבוצה שלי
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                      <Link href={'/dashboard' as never} className="flex items-center gap-2">
+                        <LayoutDashboard className="h-4 w-4" />
+                        <span>לוח בקרה</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href={'/dashboard/edit' as never} className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        <span>תרגום חדש</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+
+                {/* Admin section — only for admins */}
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">
+                      ניהול מערכת
+                    </DropdownMenuLabel>
+                    {ADMIN_NAV_LINKS.map((link) => (
+                      <DropdownMenuItem key={link.href} asChild>
+                        <Link href={link.href as never} className="flex items-center gap-2">
+                          <link.icon className="h-4 w-4" />
+                          <span>{link.label}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {/* Right side: auth + theme */}
@@ -126,37 +209,9 @@ export default function Navbar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                {(role === 'manager' || role === 'admin') && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="flex items-center gap-2">
-                      <LayoutDashboard className="h-4 w-4" />
-                      <span>הקבוצה שלי</span>
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                {role === 'admin' && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" className="flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        <span>ניהול מערכת</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin/analytics" className="flex items-center gap-2">
-                        <span className="h-4 w-4 text-center text-xs">📊</span>
-                        <span>אנליטיקה</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin/applications" className="flex items-center gap-2">
-                        <span className="h-4 w-4 text-center text-xs">📋</span>
-                        <span>בקשות</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
+                <DropdownMenuLabel className="font-normal">
+                  <p className="text-xs text-muted-foreground" dir="ltr">{user.email}</p>
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2">
                   <LogOut className="h-4 w-4" />
@@ -177,28 +232,75 @@ export default function Navbar() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-64">
-              <nav className="flex flex-col gap-4 mt-8">
+            <SheetContent side="right" className="w-72">
+              <nav className="flex flex-col gap-2 mt-8">
                 {NAV_LINKS.map((link) => (
                   <Link
                     key={link.href}
-                    href={link.href}
-                    className="text-lg hover:text-primary transition-colors"
+                    href={link.href as never}
+                    className={cn(
+                      'text-base py-2 px-3 rounded-md transition-colors',
+                      pathname === link.href
+                        ? 'bg-accent text-accent-foreground font-medium'
+                        : 'hover:bg-accent/50'
+                    )}
                   >
                     {link.label}
                   </Link>
                 ))}
-                {user && (role === 'manager' || role === 'admin') && (
-                  <Link href="/dashboard" className="text-lg hover:text-primary transition-colors flex items-center gap-2">
-                    <LayoutDashboard className="h-4 w-4" />
-                    הקבוצה שלי
-                  </Link>
+
+                {/* Manager/Admin mobile section */}
+                {user && (isAdmin || isManager) && (
+                  <>
+                    <Separator className="my-2" />
+                    <p className="text-xs text-muted-foreground px-3 font-medium">הקבוצה שלי</p>
+                    <Link
+                      href={'/dashboard' as never}
+                      className={cn(
+                        'text-base py-2 px-3 rounded-md transition-colors flex items-center gap-2',
+                        pathname === '/dashboard'
+                          ? 'bg-accent text-accent-foreground font-medium'
+                          : 'hover:bg-accent/50'
+                      )}
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      לוח בקרה
+                    </Link>
+                    <Link
+                      href={'/dashboard/edit' as never}
+                      className={cn(
+                        'text-base py-2 px-3 rounded-md transition-colors flex items-center gap-2',
+                        pathname === '/dashboard/edit'
+                          ? 'bg-accent text-accent-foreground font-medium'
+                          : 'hover:bg-accent/50'
+                      )}
+                    >
+                      <FileText className="h-4 w-4" />
+                      תרגום חדש
+                    </Link>
+                  </>
                 )}
-                {user && role === 'admin' && (
-                  <Link href="/admin" className="text-lg hover:text-primary transition-colors flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
-                    ניהול מערכת
-                  </Link>
+
+                {user && isAdmin && (
+                  <>
+                    <Separator className="my-2" />
+                    <p className="text-xs text-muted-foreground px-3 font-medium">ניהול מערכת</p>
+                    {ADMIN_NAV_LINKS.map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href as never}
+                        className={cn(
+                          'text-base py-2 px-3 rounded-md transition-colors flex items-center gap-2',
+                          pathname === link.href
+                            ? 'bg-accent text-accent-foreground font-medium'
+                            : 'hover:bg-accent/50'
+                        )}
+                      >
+                        <link.icon className="h-4 w-4" />
+                        {link.label}
+                      </Link>
+                    ))}
+                  </>
                 )}
               </nav>
             </SheetContent>

@@ -36,7 +36,7 @@ export default async function AdminOverviewPage() {
       .limit(5),
   ])
 
-  const stats = [
+  const stats: { label: string; value: number; icon: typeof Film; href: string }[] = [
     { label: 'אנימות', value: animeCount ?? 0, icon: Film, href: '/admin/animes' },
     { label: 'קבוצות', value: fansubCount ?? 0, icon: Users, href: '/admin/fansubs' },
     { label: 'תרגומים', value: translationCount ?? 0, icon: Languages, href: '#' },
@@ -50,7 +50,7 @@ export default async function AdminOverviewPage() {
       {/* Stats Grid */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {stats.map((stat) => (
-          <Link key={stat.label} href={stat.href}>
+          <Link key={stat.label} href={stat.href as never}>
             <Card className="hover:border-primary transition-colors">
               <CardContent className="py-4 flex items-center gap-3">
                 <stat.icon className="h-8 w-8 text-muted-foreground" aria-hidden />
