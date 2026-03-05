@@ -1,7 +1,7 @@
 import { TrendingUp, Film, Users } from 'lucide-react'
 import { createServerClient } from '@/lib/supabase/server'
 import SearchBar from '@/components/SearchBar'
-import RandomizerButton from '@/components/RandomizerButton'
+import SmartRandomizer from '@/components/SmartRandomizer'
 import AnimeGrid from '@/components/AnimeGrid'
 import type { AnimeCardData } from '@/components/AnimeCard'
 
@@ -57,7 +57,7 @@ export default async function HomePage() {
 
         {/* Randomizer */}
         <div className="animate-fade-in">
-          <RandomizerButton />
+          <SmartRandomizer />
         </div>
 
         {/* Stats Bar */}
