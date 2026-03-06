@@ -32,6 +32,17 @@ export async function middleware(request: NextRequest) {
   // Refresh session on every request
   const { data: { user } } = await supabase.auth.getUser()
 
+  // If Supabase redirected back to / with a ?code= (happens when the Site URL
+  // in the Supabase dashboard is set to "/" instead of "/auth/callback"),
+  // forward to the proper callback route so the session gets exchanged.
+  const code = request.nextUrl.searchParams.get('code')
+  if (code && request.nextUrl.pathname === '/') {
+    const callbackUrl = new URL('/auth/callback', request.url)
+    callbackUrl.searchParams.set('code', code)
+    callbackUrl.searchParams.set('next', '/dashboard')
+    return NextResponse.redirect(callbackUrl)
+  }
+
   // Protected routes
   const isProtectedDashboard = request.nextUrl.pathname.startsWith('/dashboard')
   const isProtectedAdmin = request.nextUrl.pathname.startsWith('/admin')
