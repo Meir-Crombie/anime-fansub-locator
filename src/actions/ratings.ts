@@ -32,20 +32,6 @@ export async function submitRating(data: unknown) {
     return { error: 'שגיאה בשמירת הדירוג' }
   }
 
-  // Recalculate rating_total and rating_count
-  const { data: allRatings } = await supabase
-    .from('ratings')
-    .select('score')
-    .eq('fansub_id', fansub_id)
-
-  if (allRatings) {
-    const total = allRatings.reduce((sum, r) => sum + r.score, 0)
-    await supabase
-      .from('fansub_groups')
-      .update({ rating_total: total, rating_count: allRatings.length })
-      .eq('id', fansub_id)
-  }
-
   revalidatePath(`/fansub/${fansub_id}`)
   return { error: null }
 }
@@ -63,20 +49,6 @@ export async function deleteRating(fansubId: string) {
     .delete()
     .eq('fansub_id', parsedId.data)
     .eq('user_id', user.id)
-
-  // Recalculate
-  const { data: allRatings } = await supabase
-    .from('ratings')
-    .select('score')
-    .eq('fansub_id', parsedId.data)
-
-  if (allRatings) {
-    const total = allRatings.reduce((sum, r) => sum + r.score, 0)
-    await supabase
-      .from('fansub_groups')
-      .update({ rating_total: total, rating_count: allRatings.length })
-      .eq('id', parsedId.data)
-  }
 
   revalidatePath(`/fansub/${parsedId.data}`)
   return { error: null }

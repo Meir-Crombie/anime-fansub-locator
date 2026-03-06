@@ -38,6 +38,11 @@ export default async function DashboardPage() {
   }
 
   // Get ratings for stats
+  const { data: allRatingsData } = await supabase
+    .from('ratings')
+    .select('score')
+    .eq('fansub_id', fansub.id)
+
   const { data: ratings } = await supabase
     .from('ratings')
     .select('score, review, created_at')
@@ -71,8 +76,10 @@ export default async function DashboardPage() {
   const ongoingCount = translations.filter((t) => t.status === 'ongoing').length
   const droppedCount = translations.filter((t) => t.status === 'dropped').length
 
-  const avgRating = fansub.rating_count > 0
-    ? (fansub.rating_total / fansub.rating_count).toFixed(1)
+  const ratingCount = allRatingsData?.length ?? 0
+  const ratingTotal = allRatingsData?.reduce((sum, r) => sum + r.score, 0) ?? 0
+  const avgRating = ratingCount > 0
+    ? (ratingTotal / ratingCount).toFixed(1)
     : null
 
   return (
@@ -108,7 +115,7 @@ export default async function DashboardPage() {
               <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" aria-hidden />
               <span className="text-2xl font-bold">{avgRating ?? '-'}</span>
             </div>
-            <p className="text-xs text-muted-foreground">{fansub.rating_count} דירוגים</p>
+            <p className="text-xs text-muted-foreground">{ratingCount} דירוגים</p>
           </CardContent>
         </Card>
       </section>

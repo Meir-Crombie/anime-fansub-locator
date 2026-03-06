@@ -18,7 +18,6 @@ export default async function FansubsPage() {
     .from('fansub_groups')
     .select('*, translations(count)')
     .eq('is_active', true)
-    .eq('status', 'approved')
     .order('created_at', { ascending: false })
     .range(0, 11)
 
@@ -26,7 +25,6 @@ export default async function FansubsPage() {
     .from('fansub_groups')
     .select('id', { count: 'exact', head: true })
     .eq('is_active', true)
-    .eq('status', 'approved')
 
   const totalCount = count ?? 0
   const typedFansubs = (fansubs ?? []) as (typeof fansubs extends (infer T)[] | null ? T : never)[]

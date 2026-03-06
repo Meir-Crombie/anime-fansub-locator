@@ -57,10 +57,15 @@ export default async function FansubPage({ params }: FansubPageProps) {
       )
     `)
     .eq('id', params.id)
-    .eq('status', 'approved')
+    .eq('is_active', true)
     .single()
 
   if (error || !fansub) notFound()
+
+  const { data: allRatingsData } = await supabase
+    .from('ratings')
+    .select('score')
+    .eq('fansub_id', fansub.id)
 
   type TranslationRow = {
     id: string
@@ -89,8 +94,10 @@ export default async function FansubPage({ params }: FansubPageProps) {
   const ongoingCount = translations.filter((t) => t.status === 'ongoing').length
   const droppedCount = translations.filter((t) => t.status === 'dropped').length
 
-  const avgRating = fansub.rating_count > 0
-    ? (fansub.rating_total / fansub.rating_count).toFixed(1)
+  const ratingCount = allRatingsData?.length ?? 0
+  const ratingTotal = allRatingsData?.reduce((sum, r) => sum + r.score, 0) ?? 0
+  const avgRating = ratingCount > 0
+    ? (ratingTotal / ratingCount).toFixed(1)
     : null
 
   return (
@@ -127,13 +134,13 @@ export default async function FansubPage({ params }: FansubPageProps) {
               <div className="flex items-center gap-1">
                 <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" aria-hidden />
                 <span className="font-medium">{avgRating}</span>
-                <span className="text-muted-foreground">({fansub.rating_count} דירוגים)</span>
+                <span className="text-muted-foreground">({ratingCount} דירוגים)</span>
               </div>
             )}
-            {fansub.founded_at && (
+            {fansub.established_year && (
               <div className="flex items-center gap-1 text-muted-foreground">
                 <Calendar className="h-4 w-4" aria-hidden />
-                <span>פעילים מאז {formatDate(fansub.founded_at)}</span>
+                <span>פעילים מאז {fansub.established_year}</span>
               </div>
             )}
           </div>

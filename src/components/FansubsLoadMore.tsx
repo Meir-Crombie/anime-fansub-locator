@@ -30,7 +30,6 @@ export default function FansubsLoadMore({ initialFansubs, totalCount }: FansubsL
       .from('fansub_groups')
       .select('*, translations(count)')
       .eq('is_active', true)
-      .eq('status', 'approved')
       .order('created_at', { ascending: false })
       .range(offset, offset + PAGE_SIZE - 1)
 
