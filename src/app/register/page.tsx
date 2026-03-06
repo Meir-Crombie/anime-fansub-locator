@@ -1,24 +1,20 @@
 'use client'
 
-import { Suspense, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState } from 'react'
 import Link from 'next/link'
-import { loginUser } from '@/actions/auth'
+import { registerUser } from '@/actions/auth'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Loader2, LogIn } from 'lucide-react'
+import { Loader2, UserPlus } from 'lucide-react'
 
-function LoginForm() {
-  const searchParams = useSearchParams()
-  const authError = searchParams.get('error')
-  const message = searchParams.get('message')
-
+export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
 
   async function handleGoogleLogin() {
     setIsGoogleLoading(true)
@@ -45,22 +41,42 @@ function LoginForm() {
     setError(null)
 
     const formData = new FormData(e.currentTarget)
-    const result = await loginUser(formData)
+    const result = await registerUser(formData)
 
-    // If loginUser succeeds it calls redirect() and never returns.
-    if (result?.error) {
+    if (result && 'error' in result && result.error) {
       setError(result.error)
+    } else if (result && 'success' in result && result.success) {
+      setSuccess(true)
     }
     setIsLoading(false)
+  }
+
+  if (success) {
+    return (
+      <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-12 text-center space-y-4">
+            <div className="text-5xl">✉️</div>
+            <h2 className="text-xl font-bold">נרשמת בהצלחה!</h2>
+            <p className="text-muted-foreground">
+              בדוק את תיבת הדואר שלך לאישור החשבון.
+            </p>
+            <Link href="/login">
+              <Button variant="outline">חזרה לדף ההתחברות</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </main>
+    )
   }
 
   return (
     <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">התחברות</CardTitle>
+          <CardTitle className="text-2xl">הרשמה</CardTitle>
           <CardDescription>
-            היכנס כדי לנהל את קבוצת הפאנסאב שלך
+            צור חשבון חדש כדי לנהל את קבוצת הפאנסאב שלך
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -81,7 +97,7 @@ function LoginForm() {
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
               </svg>
             )}
-            התחבר עם Google
+            הירשם עם Google
           </Button>
 
           <div className="flex items-center gap-4">
@@ -90,8 +106,22 @@ function LoginForm() {
             <Separator className="flex-1" />
           </div>
 
-          {/* Email/Password */}
+          {/* Email/Password Registration */}
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="first_name" className="text-sm font-medium">
+                שם פרטי
+              </label>
+              <Input
+                id="first_name"
+                name="first_name"
+                type="text"
+                placeholder="השם שלך"
+                required
+                minLength={2}
+                autoComplete="given-name"
+              />
+            </div>
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
                 כתובת אימייל
@@ -107,6 +137,19 @@ function LoginForm() {
               />
             </div>
             <div className="space-y-2">
+              <label htmlFor="age" className="text-sm font-medium">
+                גיל
+              </label>
+              <Input
+                id="age"
+                name="age"
+                type="number"
+                min={13}
+                max={120}
+                required
+              />
+            </div>
+            <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
                 סיסמה
               </label>
@@ -116,56 +159,48 @@ function LoginForm() {
                 type="password"
                 dir="ltr"
                 required
-                autoComplete="current-password"
+                minLength={8}
+                autoComplete="new-password"
+              />
+              <p className="text-xs text-muted-foreground">
+                לפחות 8 תווים, אות אחת וספרה אחת
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="confirm_password" className="text-sm font-medium">
+                אימות סיסמה
+              </label>
+              <Input
+                id="confirm_password"
+                name="confirm_password"
+                type="password"
+                dir="ltr"
+                required
+                autoComplete="new-password"
               />
             </div>
             <Button type="submit" className="w-full gap-2" disabled={isLoading}>
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
               ) : (
-                <LogIn className="h-4 w-4" aria-hidden />
+                <UserPlus className="h-4 w-4" aria-hidden />
               )}
-              התחבר
+              הירשם
             </Button>
           </form>
 
-          {/* Messages */}
-          {authError === 'auth_failed' && !error && (
-            <p className="text-sm text-destructive text-center">
-              אימות נכשל. נסה שוב.
-            </p>
-          )}
-          {message === 'password_reset_success' && !error && (
-            <p className="text-sm text-green-600 dark:text-green-400 text-center">
-              הסיסמה עודכנה בהצלחה. אנא התחבר.
-            </p>
-          )}
           {error && (
             <p className="text-sm text-destructive text-center">{error}</p>
           )}
 
-          {/* Links */}
-          <div className="flex flex-col items-center gap-2 text-sm">
-            <Link href="/forgot-password" className="text-muted-foreground hover:text-primary transition-colors">
-              שכחת סיסמה?
+          <p className="text-sm text-muted-foreground text-center">
+            כבר יש לך חשבון?{' '}
+            <Link href="/login" className="text-primary font-medium hover:underline">
+              התחבר
             </Link>
-            <p className="text-muted-foreground">
-              עדיין אין לך חשבון?{' '}
-              <Link href="/register" className="text-primary font-medium hover:underline">
-                הירשם
-              </Link>
-            </p>
-          </div>
+          </p>
         </CardContent>
       </Card>
     </main>
-  )
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
   )
 }

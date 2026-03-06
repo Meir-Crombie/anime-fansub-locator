@@ -238,9 +238,14 @@ export default function Navbar({ initialLoggedIn, initialEmail, initialRole }: N
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/login">כניסה</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/login">התחבר</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link href="/register">הירשם</Link>
+              </Button>
+            </div>
           )}
 
           {/* Mobile hamburger */}
