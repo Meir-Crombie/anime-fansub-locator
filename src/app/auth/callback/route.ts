@@ -5,7 +5,8 @@ import type { Database } from '@/lib/types/database.types'
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/'
+  // Default to /dashboard so OAuth (Google) lands in the right place
+  const next = searchParams.get('next') ?? '/dashboard'
 
   if (code) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL

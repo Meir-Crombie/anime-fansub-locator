@@ -52,7 +52,10 @@ function LoginForm() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`,
+        // Do NOT append ?next= here — Supabase validates the exact redirectTo URL
+        // against its allowed list; any query param causes a mismatch.
+        // After OAuth the callback always lands on /dashboard.
+        redirectTo: `${siteUrl}/auth/callback`,
       },
     })
 
