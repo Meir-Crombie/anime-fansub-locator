@@ -4,6 +4,7 @@ import { createServerClient } from '@/lib/supabase/server'
 
 const ADMIN_LINKS = [
   { href: '/admin', label: 'סקירה' },
+  { href: '/admin/users', label: 'משתמשים' },
   { href: '/admin/animes', label: 'אנימות' },
   { href: '/admin/fansubs', label: 'קבוצות' },
   { href: '/admin/applications', label: 'בקשות' },

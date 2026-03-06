@@ -32,6 +32,7 @@ const NAV_LINKS: { href: string; label: string }[] = [
 
 const ADMIN_NAV_LINKS: { href: string; label: string; icon: typeof Shield }[] = [
   { href: '/admin', label: 'סקירה', icon: LayoutDashboard },
+  { href: '/admin/users', label: 'משתמשים', icon: Users },
   { href: '/admin/animes', label: 'אנימות', icon: Film },
   { href: '/admin/fansubs', label: 'קבוצות', icon: Users },
   { href: '/admin/applications', label: 'בקשות', icon: ClipboardList },
