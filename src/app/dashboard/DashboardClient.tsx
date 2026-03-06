@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { TranslationBadge } from '@/components/TranslationBadge'
 import EmptyState from '@/components/EmptyState'
-import { Plus, Trash2, Loader2, Pencil, Megaphone, Eye, EyeOff } from 'lucide-react'
+import { Plus, Trash2, Loader2, Pencil, Megaphone, Eye, EyeOff, Settings } from 'lucide-react'
 import type { FansubGroup } from '@/lib/types'
 
 type TranslationRow = {
@@ -138,11 +138,19 @@ export default function DashboardClient({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>פרטי הקבוצה</CardTitle>
-            {!isEditingGroup && (
-              <Button variant="outline" size="sm" onClick={() => setIsEditingGroup(true)}>
-                <Pencil className="h-4 w-4 me-1" /> עריכה
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href={'/dashboard/profile' as never}>
+                  <Settings className="h-4 w-4 me-1" aria-hidden />
+                  ערוך פרופיל
+                </Link>
               </Button>
-            )}
+              {!isEditingGroup && (
+                <Button variant="ghost" size="sm" onClick={() => setIsEditingGroup(true)}>
+                  <Pencil className="h-4 w-4 me-1" /> קישורים
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {isEditingGroup ? (

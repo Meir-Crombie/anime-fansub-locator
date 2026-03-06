@@ -38,7 +38,7 @@ import { Loader2 } from 'lucide-react'
 import type { FansubGroup } from '@/lib/types'
 
 // Combines the DB record shape with the new extended profile fields
-type FansubProfileDefaults = Partial<FansubGroup> & Partial<FansubProfileFormValues>
+type FansubProfileDefaults = Partial<FansubGroup>
 
 interface FansubProfileFormProps {
   defaultValues?: FansubProfileDefaults
@@ -55,20 +55,20 @@ export default function FansubProfileForm({ defaultValues }: FansubProfileFormPr
     defaultValues: {
       name:                 defaultValues?.name ?? '',
       logo_url:             defaultValues?.logo_url ?? '',
-      established_year:     undefined,
+      established_year:     (defaultValues?.established_year as number | undefined) ?? undefined,
       description:          defaultValues?.description ?? '',
       website_url:          defaultValues?.website_url ?? '',
       discord_url:          defaultValues?.discord_url ?? '',
       telegram_url:         defaultValues?.telegram_url ?? '',
-      activity_status:      'active',
-      translation_domains:  [],
-      flagship_projects:    '',
+      activity_status:      (defaultValues?.activity_status as 'active' | 'on_break' | 'inactive') ?? 'active',
+      translation_domains:  (defaultValues?.translation_domains as string[]) ?? [],
+      flagship_projects:    (defaultValues?.flagship_projects as string | undefined) ?? '',
       is_recruiting:        defaultValues?.is_recruiting ?? false,
-      recruiting_roles:     [],
-      recruitment_contact:  '',
-      submitter_name:       '',
-      submitter_role:       '',
-      submitter_contact:    '',
+      recruiting_roles:     (defaultValues?.recruiting_roles as string[]) ?? [],
+      recruitment_contact:  (defaultValues?.recruitment_contact as string | undefined) ?? '',
+      submitter_name:       (defaultValues?.submitter_name as string | undefined) ?? '',
+      submitter_role:       (defaultValues?.submitter_role as string | undefined) ?? '',
+      submitter_contact:    (defaultValues?.submitter_contact as string | undefined) ?? '',
     },
   })
 

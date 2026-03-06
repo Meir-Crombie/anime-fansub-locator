@@ -6,7 +6,7 @@ import EmptyState from '@/components/EmptyState'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { Star } from 'lucide-react'
+import { Star, Plus } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import DashboardClient from './DashboardClient'
 
@@ -30,9 +30,17 @@ export default async function DashboardPage() {
 
   if (!fansub) {
     return (
-      <main className="container mx-auto max-w-4xl px-4 py-12 text-center">
-        <h1 className="text-2xl font-bold mb-4">לוח בקרה</h1>
-        <EmptyState message="לא נמצאה קבוצת פאנסאב המשויכת לחשבונך. פנה למנהל המערכת." />
+      <main className="container mx-auto max-w-4xl px-4 py-12 text-center space-y-4">
+        <h1 className="text-2xl font-bold">לוח בקרה</h1>
+        <p className="text-muted-foreground">
+          לא נמצאה קבוצת פאנסאב המשויכת לחשבונך.
+        </p>
+        <Button asChild>
+          <Link href={'/dashboard/profile' as never}>
+            <Plus className="h-4 w-4 me-2" aria-hidden />
+            רשום קבוצה חדשה
+          </Link>
+        </Button>
       </main>
     )
   }

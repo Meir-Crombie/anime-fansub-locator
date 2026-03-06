@@ -108,7 +108,7 @@ export async function upsertFansubProfile(
   } else {
     const { data: inserted, error } = await supabase
       .from('fansub_groups')
-      .insert({ ...payload, status: 'pending' })
+      .insert({ ...payload, is_active: false })
       .select('id')
       .single()
     if (error) return { success: false, error: error.message }
