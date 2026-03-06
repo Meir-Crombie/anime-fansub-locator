@@ -54,7 +54,6 @@ export const fansubProfileSchema = z
           .max(currentYear, { message: `שנת הקמה מקסימלית היא ${currentYear}` }),
         z.literal('').transform(() => undefined),
         z.undefined(),
-        z.null().transform(() => undefined),
       ])
       .optional(),
 

@@ -37,16 +37,21 @@ import { Separator } from '@/components/ui/separator'
 import { Loader2 } from 'lucide-react'
 import type { FansubGroup } from '@/lib/types'
 
+// Combines the DB record shape with the new extended profile fields
+type FansubProfileDefaults = Partial<FansubGroup> & Partial<FansubProfileFormValues>
+
 interface FansubProfileFormProps {
-  defaultValues?: Partial<FansubGroup>
+  defaultValues?: FansubProfileDefaults
 }
 
 export default function FansubProfileForm({ defaultValues }: FansubProfileFormProps) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
-  const form = useForm<FansubProfileFormValues>({
-    resolver: zodResolver(fansubProfileSchema),
+  // Inferred type from schema via zodResolver
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const form = useForm<FansubProfileFormValues, any, FansubProfileFormValues>({
+    resolver: zodResolver(fansubProfileSchema) as never,
     defaultValues: {
       name:                 defaultValues?.name ?? '',
       logo_url:             defaultValues?.logo_url ?? '',
