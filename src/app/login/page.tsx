@@ -27,7 +27,7 @@ function LoginForm() {
     setMessage(null)
 
     const supabase = createClient()
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
+    const siteUrl = window.location.origin
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -48,13 +48,12 @@ function LoginForm() {
     setError(null)
 
     const supabase = createClient()
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
+    // Always use the current browser origin so redirectTo matches the
+    // origin the user is actually on (localhost vs. production).
+    const siteUrl = window.location.origin
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // Do NOT append ?next= here — Supabase validates the exact redirectTo URL
-        // against its allowed list; any query param causes a mismatch.
-        // After OAuth the callback always lands on /dashboard.
         redirectTo: `${siteUrl}/auth/callback`,
       },
     })

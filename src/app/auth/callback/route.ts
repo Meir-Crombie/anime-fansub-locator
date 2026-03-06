@@ -36,6 +36,14 @@ export async function GET(req: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
+    if (error) {
+      console.error('[auth/callback] exchangeCodeForSession error:', {
+        message: error.message,
+        status: error.status,
+        code: (error as { code?: string }).code,
+      })
+    }
+
     if (!error) {
       // On Vercel (behind a load balancer), req.url may contain an internal IP.
       // x-forwarded-host gives us the real public hostname.
