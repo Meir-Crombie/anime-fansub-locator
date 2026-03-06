@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Heebo, Inter } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import Navbar from '@/components/Navbar'
 import { Toaster } from '@/components/ui/toaster'
 import { createServerClient } from '@/lib/supabase/server'
@@ -64,6 +65,7 @@ export default async function RootLayout({
             <main className="flex-1">{children}</main>
           </div>
           <Toaster />
+          <SpeedInsights />
         </ThemeProvider>
       </body>
     </html>
