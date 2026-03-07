@@ -40,6 +40,27 @@ export async function setAdminRole(userId: string) {
   return { error: null }
 }
 
+export async function demoteAdmin(userId: string) {
+  const parsed = uuidSchema.safeParse(userId)
+  if (!parsed.success) return { error: 'מזהה לא תקין' }
+
+  const { supabase, userId: adminId } = await requireAdmin()
+
+  if (adminId === parsed.data) {
+    return { error: 'לא ניתן להוריד את עצמך מתפקיד מנהל ראשי' }
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ role: 'viewer' })
+    .eq('id', parsed.data)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/users')
+  return { error: null }
+}
+
 export async function assignManagerToGroup(userId: string, fansubId: string) {
   const parsedUser = uuidSchema.safeParse(userId)
   const parsedFansub = uuidSchema.safeParse(fansubId)

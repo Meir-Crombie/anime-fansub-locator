@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { assignManagerToGroup, removeManagerRole } from '@/actions/admin'
+import { assignManagerToGroup, removeManagerRole, setAdminRole, demoteAdmin } from '@/actions/admin'
 
 interface User {
   id: string
@@ -18,9 +18,10 @@ interface Fansub {
 interface Props {
   users: User[]
   fansubs: Fansub[]
+  currentUserId: string
 }
 
-export default function UserRoleManager({ users: initialUsers, fansubs }: Props) {
+export default function UserRoleManager({ users: initialUsers, fansubs, currentUserId }: Props) {
   const [users, setUsers] = useState(initialUsers)
   const [loading, setLoading] = useState<string | null>(null)
   const [selectedFansub, setSelectedFansub] = useState<Record<string, string>>({})
@@ -44,6 +45,34 @@ export default function UserRoleManager({ users: initialUsers, fansubs }: Props)
     } else {
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role: 'manager' } : u))
+      )
+    }
+    setLoading(null)
+  }
+
+  async function handlePromoteAdmin(userId: string) {
+    if (!confirm('להפוך את המשתמש הזה למנהל ראשי?')) return
+    setLoading(userId)
+    const result = await setAdminRole(userId)
+    if (result?.error) {
+      alert(result.error)
+    } else {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, role: 'admin' } : u))
+      )
+    }
+    setLoading(null)
+  }
+
+  async function handleDemoteAdmin(userId: string) {
+    if (!confirm('להוריד את המשתמש הזה מתפקיד מנהל ראשי?')) return
+    setLoading(userId)
+    const result = await demoteAdmin(userId)
+    if (result?.error) {
+      alert(result.error)
+    } else {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, role: 'viewer' } : u))
       )
     }
     setLoading(null)
@@ -143,28 +172,58 @@ export default function UserRoleManager({ users: initialUsers, fansubs }: Props)
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
                     {user.role === 'viewer' && (
-                      <button
-                        onClick={() => handleAssignManager(user.id)}
-                        disabled={loading === user.id}
-                        className="text-xs px-2 py-1 rounded bg-blue-600 text-white
-                                   hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                      >
-                        {loading === user.id ? '...' : 'הגדר כמנהל'}
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleAssignManager(user.id)}
+                          disabled={loading === user.id}
+                          className="text-xs px-2 py-1 rounded bg-blue-600 text-white
+                                     hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                        >
+                          {loading === user.id ? '...' : 'הגדר כמנהל קבוצה'}
+                        </button>
+                        <button
+                          onClick={() => handlePromoteAdmin(user.id)}
+                          disabled={loading === user.id}
+                          className="text-xs px-2 py-1 rounded bg-red-600 text-white
+                                     hover:bg-red-700 disabled:opacity-50 transition-colors"
+                        >
+                          {loading === user.id ? '...' : 'הגדר כמנהל ראשי'}
+                        </button>
+                      </>
                     )}
                     {user.role === 'manager' && (
+                      <>
+                        <button
+                          onClick={() => handleRemoveRole(user.id)}
+                          disabled={loading === user.id}
+                          className="text-xs px-2 py-1 rounded bg-destructive text-destructive-foreground
+                                     hover:bg-destructive/90 disabled:opacity-50 transition-colors"
+                        >
+                          {loading === user.id ? '...' : 'הסר הרשאות'}
+                        </button>
+                        <button
+                          onClick={() => handlePromoteAdmin(user.id)}
+                          disabled={loading === user.id}
+                          className="text-xs px-2 py-1 rounded bg-red-600 text-white
+                                     hover:bg-red-700 disabled:opacity-50 transition-colors"
+                        >
+                          {loading === user.id ? '...' : 'הגדר כמנהל ראשי'}
+                        </button>
+                      </>
+                    )}
+                    {user.role === 'admin' && user.id !== currentUserId && (
                       <button
-                        onClick={() => handleRemoveRole(user.id)}
+                        onClick={() => handleDemoteAdmin(user.id)}
                         disabled={loading === user.id}
                         className="text-xs px-2 py-1 rounded bg-destructive text-destructive-foreground
                                    hover:bg-destructive/90 disabled:opacity-50 transition-colors"
                       >
-                        {loading === user.id ? '...' : 'הסר הרשאות'}
+                        {loading === user.id ? '...' : 'הסר הרשאות מנהל'}
                       </button>
                     )}
-                    {user.role === 'admin' && (
+                    {user.role === 'admin' && user.id === currentUserId && (
                       <span className="text-xs text-muted-foreground">
-                        מנהל ראשי
+                        את/ה (מנהל ראשי)
                       </span>
                     )}
                   </div>

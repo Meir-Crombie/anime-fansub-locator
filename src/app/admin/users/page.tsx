@@ -16,6 +16,9 @@ export default async function AdminUsersPage() {
     .select('id, name, manager_uid')
     .eq('is_active', true)
 
+  const { data: { user } } = await supabase.auth.getUser()
+  const currentUserId = user?.id ?? ''
+
   return (
     <div dir="rtl" className="space-y-6">
       <div>
@@ -24,7 +27,7 @@ export default async function AdminUsersPage() {
           שנה תפקידים, שייך מנהלים לקבוצות
         </p>
       </div>
-      <UserRoleManager users={users ?? []} fansubs={fansubs ?? []} />
+      <UserRoleManager users={users ?? []} fansubs={fansubs ?? []} currentUserId={currentUserId} />
     </div>
   )
 }
