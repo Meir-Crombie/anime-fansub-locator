@@ -114,6 +114,11 @@ export async function approveApplication(applicationId: string) {
 
   const formData = app.form_data as Record<string, string>
 
+  // Extract year from founded_at date if provided (form sends ISO date string)
+  const establishedYear = formData.founded_at
+    ? new Date(formData.founded_at).getFullYear()
+    : null
+
   const { data: newGroup, error: insertError } = await supabase
     .from('fansub_groups')
     .insert({
@@ -123,7 +128,7 @@ export async function approveApplication(applicationId: string) {
       telegram_url: formData.telegram_url || null,
       discord_url: formData.discord_url || null,
       logo_url: formData.logo_url || null,
-      founded_at: formData.founded_at || null,
+      established_year: establishedYear,
       status: 'approved' as const,
       is_active: true,
     })
