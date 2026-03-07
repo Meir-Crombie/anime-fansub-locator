@@ -72,6 +72,7 @@ Never use TypeScript `any`. Always use the generated types from `lib/types/datab
 | Storage | Supabase Storage | For cover images and fansub logos |
 | Validation | Zod | On every Server Action and Route Handler input |
 | Hosting | Vercel | ISR + `revalidatePath` after mutations |
+| Performance Monitoring | `@vercel/speed-insights` | Vercel's official Web Vitals tracker; zero-config, no third-party vendor |
 | HTTP Client | Native `fetch` only | No axios, no react-query |
 
 Do not install libraries outside this list without a comment explaining why.
