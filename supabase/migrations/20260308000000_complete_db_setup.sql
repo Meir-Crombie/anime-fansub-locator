@@ -567,16 +567,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 8j. show_limit / show_trgm (debugging helpers)
-CREATE OR REPLACE FUNCTION show_limit()
-RETURNS FLOAT AS $$
-  SELECT current_setting('pg_trgm.similarity_threshold')::FLOAT;
-$$ LANGUAGE sql STABLE;
-
-CREATE OR REPLACE FUNCTION show_trgm(text)
-RETURNS TEXT[] AS $$
-  SELECT show_trgm($1);
-$$ LANGUAGE sql STABLE;
+-- 8j. show_limit / show_trgm are built-in pg_trgm functions — no need to create them.
 
 -- ============================================================
 -- 9. Seed default form fields (only if none exist)
