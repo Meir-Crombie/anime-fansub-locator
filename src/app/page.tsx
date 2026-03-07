@@ -5,6 +5,8 @@ import SmartRandomizer from '@/components/SmartRandomizer'
 import AnimeGrid from '@/components/AnimeGrid'
 import type { AnimeCardData } from '@/components/AnimeCard'
 
+export const dynamic = 'force-dynamic'
+
 export default async function HomePage() {
   const supabase = createServerClient()
 

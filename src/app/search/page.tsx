@@ -2,6 +2,8 @@ import { createServerClient } from '@/lib/supabase/server'
 import AnimeGrid from '@/components/AnimeGrid'
 import type { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
+
 interface SearchResult {
   id: string
   title_he: string

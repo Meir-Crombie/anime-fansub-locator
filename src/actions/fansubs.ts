@@ -40,6 +40,8 @@ export async function updateFansubGroup(formData: FormData) {
 
   revalidatePath(`/fansub/${id}`)
   revalidatePath('/dashboard')
+  revalidatePath('/fansubs')
+  revalidatePath('/')
   return { error: null }
 }
 
@@ -117,6 +119,8 @@ export async function upsertFansubProfile(
 
   revalidatePath('/dashboard')
   revalidatePath(`/fansub/${fansubId}`)
+  revalidatePath('/fansubs')
+  revalidatePath('/')
   return { success: true, fansubId }
 }
 

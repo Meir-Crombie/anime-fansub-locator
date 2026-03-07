@@ -13,3 +13,4 @@ export type Announcement = Tables<'announcements'>
 export type EpisodeProgress = Tables<'episode_progress'>
 export type FormField = Tables<'form_fields'>
 export type FansubApplication = Tables<'fansub_applications'>
+export type SiteSettings = Tables<'site_settings'>

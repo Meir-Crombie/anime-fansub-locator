@@ -5,6 +5,9 @@ import EmptyState from '@/components/EmptyState'
 import Link from 'next/link'
 import type { Route } from 'next'
 import { Film, Users, Languages, Search, FileText, ShieldCheck } from 'lucide-react'
+import InactivitySettings from '@/components/admin/InactivitySettings'
+
+export const dynamic = 'force-dynamic'
 
 export default async function AdminOverviewPage() {
   const supabase = createServerClient()
@@ -20,6 +23,7 @@ export default async function AdminOverviewPage() {
     { data: recentTranslations },
     { data: recentUsers },
     { data: pendingApps },
+    { data: thresholdRow },
   ] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
     supabase.from('animes').select('*', { count: 'exact', head: true }),
@@ -55,6 +59,11 @@ export default async function AdminOverviewPage() {
       .eq('status', 'pending')
       .order('created_at', { ascending: true })
       .limit(5),
+    supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'inactivity_threshold_months')
+      .maybeSingle(),
   ])
 
   const stats = [
@@ -235,6 +244,21 @@ export default async function AdminOverviewPage() {
           </Card>
         </section>
       </div>
+
+      {/* Inactivity Settings */}
+      <section>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5" aria-hidden />
+              הגדרות פעילות קבוצות
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InactivitySettings initialThreshold={Number(thresholdRow?.value ?? '6')} />
+          </CardContent>
+        </Card>
+      </section>
     </main>
   )
 }

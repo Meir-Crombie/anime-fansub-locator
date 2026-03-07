@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const supabase = await createServerClient()
   const { data, error } = await supabase.rpc('get_all_genres')
@@ -11,5 +13,7 @@ export async function GET() {
   }
 
   const genres = data?.map((row: { genre: string }) => row.genre) ?? []
-  return NextResponse.json({ data: genres, error: null })
+  return NextResponse.json({ data: genres, error: null }, {
+    headers: { 'Cache-Control': 'no-store' },
+  })
 }

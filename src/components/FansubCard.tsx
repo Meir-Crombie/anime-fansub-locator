@@ -37,7 +37,19 @@ export default function FansubCard({ fansub }: FansubCardProps) {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <CardTitle className="text-lg truncate">{fansub.name}</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg truncate">{fansub.name}</CardTitle>
+              {fansub.activity_status === 'inactive' && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border flex-shrink-0">
+                  לא פעיל
+                </span>
+              )}
+              {fansub.activity_status === 'on_break' && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800 flex-shrink-0">
+                  בהפסקה
+                </span>
+              )}
+            </div>
             {fansub.description && (
               <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
                 {fansub.description.length > 80

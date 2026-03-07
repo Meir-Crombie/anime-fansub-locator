@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServerClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 const schema = z.object({ query: z.string().min(2).max(200) })
 
 export async function POST(req: NextRequest) {
@@ -36,5 +38,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  return NextResponse.json({ data: data ?? [], error: null })
+  return NextResponse.json({ data: data ?? [], error: null }, {
+    headers: { 'Cache-Control': 'no-store' },
+  })
 }

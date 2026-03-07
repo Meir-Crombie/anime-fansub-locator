@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge'
 import EmptyState from '@/components/EmptyState'
 import type { FansubGroup } from '@/lib/types'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminFansubsPage() {
   const supabase = createServerClient()
 

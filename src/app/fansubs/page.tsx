@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   description: 'כל קבוצות הפאנסאב הישראליות',
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function FansubsPage() {
   const supabase = createServerClient()
 

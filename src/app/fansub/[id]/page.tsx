@@ -12,6 +12,8 @@ import { ExternalLink, Send, MessageSquare, Star, Calendar, Megaphone } from 'lu
 import { formatDate } from '@/lib/utils'
 import type { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
+
 interface FansubPageProps {
   params: { id: string }
 }
@@ -120,7 +122,19 @@ export default async function FansubPage({ params }: FansubPageProps) {
           )}
         </div>
         <div className="flex-1 space-y-3">
-          <h1 className="text-3xl font-bold">{fansub.name}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">{fansub.name}</h1>
+            {fansub.activity_status === 'inactive' && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border">
+                לא פעיל
+              </span>
+            )}
+            {fansub.activity_status === 'on_break' && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800">
+                בהפסקה
+              </span>
+            )}
+          </div>
           {fansub.description && (
             <p className="text-muted-foreground">{fansub.description}</p>
           )}

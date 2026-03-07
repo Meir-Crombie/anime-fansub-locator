@@ -59,6 +59,7 @@ export async function upsertTranslation(formData: FormData) {
 
   revalidatePath(`/anime/${parsed.data.anime_id}`)
   revalidatePath('/dashboard')
+  revalidatePath(`/fansub/${parsed.data.fansub_id}`)
   return { error: null }
 }
 
@@ -83,6 +84,7 @@ export async function deleteTranslation(id: string) {
 
   revalidatePath(`/anime/${t.anime_id}`)
   revalidatePath('/dashboard')
+  revalidatePath(`/fansub/${t.fansub_id}`)
   return { error: null }
 }
 
@@ -121,5 +123,6 @@ export async function updateEpisodeProgress(data: unknown) {
 
   revalidatePath(`/anime/${translation.anime_id}`)
   revalidatePath('/dashboard')
+  revalidatePath(`/fansub/${translation.fansub_id}`)
   return { error: null }
 }

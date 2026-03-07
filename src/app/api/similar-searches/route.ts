@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')
   if (!q || q.length < 2) {
@@ -23,5 +25,7 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  return NextResponse.json({ data: data ?? [], error: null })
+  return NextResponse.json({ data: data ?? [], error: null }, {
+    headers: { 'Cache-Control': 'no-store' },
+  })
 }

@@ -74,14 +74,33 @@ export default function ApplicationForm({ fields }: ApplicationFormProps) {
 
   if (isSuccess) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center space-y-4">
-          <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
-          <h2 className="text-xl font-bold">בקשתך התקבלה!</h2>
-          <p className="text-muted-foreground">
-            בקשתך התקבלה ותיבדק על ידי הנהלת האתר. נעדכן אותך כשתאושר.
-          </p>
-          <Button onClick={() => router.push('/')}>חזרה לדף הבית</Button>
+      <Card className="border-green-200 dark:border-green-800">
+        <CardContent className="py-16 text-center space-y-6">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+            <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold">הבקשה נשלחה בהצלחה!</h2>
+            <p className="text-muted-foreground leading-relaxed max-w-md mx-auto">
+              תודה שהגשת את קבוצתך לרישום באתר.
+              <br />
+              הבקשה תיבדק על ידי הנהלת האתר ונחזור אליך בהקדם.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <Button onClick={() => router.push('/')}>
+              חזרה לדף הבית
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsSuccess(false)
+                setFormData({})
+              }}
+            >
+              הגשת בקשה נוספת
+            </Button>
+          </div>
         </CardContent>
       </Card>
     )

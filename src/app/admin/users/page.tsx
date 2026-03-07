@@ -1,6 +1,8 @@
 import { createServerClient } from '@/lib/supabase/server'
 import UserRoleManager from '@/components/admin/UserRoleManager'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminUsersPage() {
   const supabase = createServerClient()
 

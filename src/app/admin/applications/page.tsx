@@ -3,6 +3,8 @@ import EmptyState from '@/components/EmptyState'
 import ApplicationReviewList from './ApplicationReviewList'
 import type { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'בקשות ממתינות | ניהול | Fansub Hub',
 }

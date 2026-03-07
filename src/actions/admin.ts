@@ -48,11 +48,22 @@ export async function assignManagerToGroup(userId: string, fansubId: string) {
   }
 
   const { supabase } = await requireAdmin()
-  const { error: profileError } = await supabase
+
+  // Only set role to 'manager' if they are currently a 'viewer'
+  // Admins keep their admin role even when managing a group
+  const { data: targetProfile } = await supabase
     .from('profiles')
-    .update({ role: 'manager' })
+    .select('role')
     .eq('id', parsedUser.data)
-  if (profileError) return { error: profileError.message }
+    .single()
+
+  if (targetProfile?.role === 'viewer') {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ role: 'manager' })
+      .eq('id', parsedUser.data)
+    if (profileError) return { error: profileError.message }
+  }
 
   const { error: groupError } = await supabase
     .from('fansub_groups')
@@ -61,6 +72,8 @@ export async function assignManagerToGroup(userId: string, fansubId: string) {
   if (groupError) return { error: groupError.message }
 
   revalidatePath('/admin')
+  revalidatePath('/admin/users')
+  revalidatePath('/fansubs')
   return { error: null }
 }
 
@@ -81,6 +94,7 @@ export async function removeManagerRole(userId: string) {
     .eq('id', parsed.data)
 
   revalidatePath('/admin')
+  revalidatePath('/admin/users')
   return { error: null }
 }
 
@@ -120,10 +134,19 @@ export async function approveApplication(applicationId: string) {
 
   // Assign submitter as manager if applicable
   if (app.submitted_by && newGroup) {
-    await supabase
+    // Only set role to 'manager' if not already an admin
+    const { data: submitterProfile } = await supabase
       .from('profiles')
-      .update({ role: 'manager' })
+      .select('role')
       .eq('id', app.submitted_by)
+      .single()
+
+    if (submitterProfile?.role === 'viewer') {
+      await supabase
+        .from('profiles')
+        .update({ role: 'manager' })
+        .eq('id', app.submitted_by)
+    }
     await supabase
       .from('fansub_groups')
       .update({ manager_uid: app.submitted_by })
@@ -140,7 +163,9 @@ export async function approveApplication(applicationId: string) {
     .eq('id', parsed.data)
 
   revalidatePath('/admin/applications')
+  revalidatePath('/admin/users')
   revalidatePath('/fansubs')
+  revalidatePath('/')
   return { error: null }
 }
 
