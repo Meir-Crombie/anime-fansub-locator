@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { updateFansubGroup } from '@/actions/fansubs'
+import { updateFansubGroup, deleteFansubGroup } from '@/actions/fansubs'
 import { deleteTranslation } from '@/actions/translations'
 import { createAnnouncement, toggleAnnouncementPublished, deleteAnnouncement } from '@/actions/announcements'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -67,6 +67,7 @@ export default function DashboardClient({
   const [annContent, setAnnContent] = useState('')
   const [annType, setAnnType] = useState('general')
   const [isSavingAnn, setIsSavingAnn] = useState(false)
+  const [isDeletingGroup, setIsDeletingGroup] = useState(false)
 
   async function handleSaveGroup(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -96,6 +97,19 @@ export default function DashboardClient({
     await deleteTranslation(id)
     setTranslations((prev) => prev.filter((t) => t.id !== id))
     setDeletingId(null)
+  }
+
+  async function handleDeleteGroup() {
+    if (!confirm(`האם אתה בטוח שברצונך למחוק את הקבוצה "${fansub.name}"? פעולה זו בלתי הפיכה ותמחק גם את כל התרגומים וההודעות.`)) return
+    setIsDeletingGroup(true)
+    const result = await deleteFansubGroup(fansub.id)
+    if (result.error) {
+      alert(result.error)
+      setIsDeletingGroup(false)
+    } else {
+      router.push('/dashboard')
+      router.refresh()
+    }
   }
 
   async function handleCreateAnnouncement() {
@@ -150,6 +164,20 @@ export default function DashboardClient({
                   <Pencil className="h-4 w-4 me-1" /> קישורים
                 </Button>
               )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={handleDeleteGroup}
+                disabled={isDeletingGroup}
+              >
+                {isDeletingGroup ? (
+                  <Loader2 className="h-4 w-4 me-1 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4 me-1" />
+                )}
+                מחק קבוצה
+              </Button>
             </div>
           </CardHeader>
           <CardContent>

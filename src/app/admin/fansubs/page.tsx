@@ -17,7 +17,7 @@ export default async function AdminFansubsPage() {
     .eq('id', user!.id)
     .single()
 
-  const isSuperAdmin = profile?.role === 'super_admin'
+  const isSuperAdmin = ['admin', 'super_admin'].includes(profile?.role ?? '')
 
   const { data: fansubs, error } = await supabase
     .from('fansub_groups')

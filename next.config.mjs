@@ -12,6 +12,14 @@ const nextConfig = {
         hostname: 'cdn.myanimelist.net',
         pathname: '/anime/**',
       },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
     ],
   },
   experimental: {

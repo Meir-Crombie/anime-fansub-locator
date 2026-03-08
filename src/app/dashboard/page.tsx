@@ -11,7 +11,16 @@ export default async function DashboardPage() {
   const supabase = createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: fansubs } = await supabase
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user!.id)
+    .single()
+
+  const isAdminRole = profile?.role === 'admin' || profile?.role === 'super_admin'
+
+  // First try groups the user directly manages
+  const { data: ownFansubs } = await supabase
     .from('fansub_groups')
     .select(`
       *,
@@ -24,7 +33,26 @@ export default async function DashboardPage() {
     `)
     .eq('manager_uid', user!.id)
 
-  const allFansubs = fansubs ?? []
+  let allFansubs = ownFansubs ?? []
+
+  // For admin/super_admin with no own groups — load all active groups
+  if (allFansubs.length === 0 && isAdminRole) {
+    const { data: allGroups } = await supabase
+      .from('fansub_groups')
+      .select(`
+        *,
+        translations (
+          id, status, platform, direct_link, notes, updated_at,
+          episode_progress (translated_episodes, total_episodes, last_episode_at),
+          animes (id, title_he, title_en, cover_image_url)
+        ),
+        announcements (id, title, type, created_at, is_published)
+      `)
+      .eq('is_active', true)
+      .order('name')
+
+    allFansubs = allGroups ?? []
+  }
 
   if (allFansubs.length === 0) {
     return (

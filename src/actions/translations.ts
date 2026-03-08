@@ -157,44 +157,25 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
   // Verify that the user can write to this fansub
   await verifyManager(supabase, fansubId, user.id)
 
-  // Find existing anime by Hebrew name
+  // Use the anime_id selected from autocomplete — verify it exists
   const { data: existing } = await supabase
     .from('animes')
     .select('id')
-    .ilike('title_he', parsed.data.anime_name.trim())
+    .eq('id', parsed.data.anime_id)
     .maybeSingle()
 
-  let animeId: string
-
-  if (existing) {
-    animeId = existing.id
-    // Update cover image if provided
-    if (parsed.data.cover_image_url) {
-      await supabase
-        .from('animes')
-        .update({ cover_image_url: parsed.data.cover_image_url })
-        .eq('id', animeId)
+  if (!existing) {
+    return {
+      error: {
+        formErrors: [],
+        fieldErrors: {
+          anime_name: ['האנימה לא נמצאה במאגר. יש לבחור אנימה קיימת מהרשימה.'],
+        },
+      },
     }
-  } else {
-    // Create new anime entry
-    const insertData: { title_he: string; title_en: string; cover_image_url?: string; genres?: string[] } = {
-      title_he: parsed.data.anime_name.trim(),
-      title_en: parsed.data.anime_name_en?.trim() ?? '',
-    }
-    if (parsed.data.cover_image_url) {
-      insertData.cover_image_url = parsed.data.cover_image_url
-    }
-    if (parsed.data.genres && parsed.data.genres.length > 0) {
-      insertData.genres = parsed.data.genres
-    }
-    const { data: newAnime, error: animeError } = await supabase
-      .from('animes')
-      .insert(insertData)
-      .select('id')
-      .single()
-    if (animeError || !newAnime) throw new Error(animeError?.message ?? 'Failed to create anime')
-    animeId = newAnime.id
   }
+
+  const animeId = existing.id
 
   // Build notes from optional fields
   const notesParts: string[] = []

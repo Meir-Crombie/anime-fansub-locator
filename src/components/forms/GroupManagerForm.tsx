@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { submitManagerTranslation } from '@/actions/translations'
 import {
@@ -8,6 +8,12 @@ import {
   type GroupManagerFormValues,
 } from '@/lib/validations/submission'
 import { GENRES } from '@/lib/constants'
+
+interface AnimeResult {
+  id: string
+  title_he: string
+  title_en: string
+}
 
 const STATUS_OPTIONS = [
   { value: 'ongoing' as const, label: 'בתרגום פעיל', color: '#22c55e', icon: '⚡' },
@@ -45,6 +51,90 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
 
+  // Anime autocomplete state
+  const [animeQuery, setAnimeQuery] = useState('')
+  const [animeResults, setAnimeResults] = useState<AnimeResult[]>([])
+  const [selectedAnime, setSelectedAnime] = useState<AnimeResult | null>(null)
+  const [isSearching, setIsSearching] = useState(false)
+  const [showDropdown, setShowDropdown] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const searchAnimes = useCallback(async (query: string) => {
+    if (query.trim().length < 1) {
+      setAnimeResults([])
+      setShowDropdown(false)
+      return
+    }
+    setIsSearching(true)
+    try {
+      const res = await fetch('/api/animes-autocomplete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query.trim() }),
+      })
+      const json = await res.json()
+      setAnimeResults(json.data ?? [])
+      setShowDropdown(true)
+    } catch {
+      setAnimeResults([])
+    } finally {
+      setIsSearching(false)
+    }
+  }, [])
+
+  function handleAnimeQueryChange(value: string) {
+    setAnimeQuery(value)
+    // Clear selection if user edits after selecting
+    if (selectedAnime) {
+      setSelectedAnime(null)
+      setFormData((prev) => {
+        const next = { ...prev }
+        delete next.anime_id
+        delete next.anime_name
+        return next
+      })
+    }
+    setErrors((prev) => {
+      const next = { ...prev }
+      delete next.anime_name
+      delete next.anime_id
+      return next
+    })
+    // Debounced search
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => searchAnimes(value), 300)
+  }
+
+  function selectAnime(anime: AnimeResult) {
+    setSelectedAnime(anime)
+    setAnimeQuery(anime.title_he)
+    setShowDropdown(false)
+    setFormData((prev) => ({
+      ...prev,
+      anime_id: anime.id,
+      anime_name: anime.title_he,
+      anime_name_en: anime.title_en || undefined,
+    }))
+    setErrors((prev) => {
+      const next = { ...prev }
+      delete next.anime_name
+      delete next.anime_id
+      return next
+    })
+  }
+
   function updateField<K extends keyof GroupManagerFormValues>(
     key: K,
     value: GroupManagerFormValues[K]
@@ -76,6 +166,12 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErrors({})
+
+    // Block submission if no anime selected from autocomplete
+    if (!selectedAnime || !formData.anime_id) {
+      setErrors({ anime_name: 'יש לבחור אנימה מהרשימה' })
+      return
+    }
 
     const validated = groupManagerFormSchema.safeParse(formData)
     if (!validated.success) {
@@ -144,31 +240,55 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
 
         {/* Form card */}
         <form onSubmit={handleSubmit} className="space-y-6 glass-card rounded-2xl p-8">
-          {/* Anime Name — required */}
-          <div>
+          {/* Anime Name — autocomplete from DB */}
+          <div ref={dropdownRef} className="relative">
             <SectionLabel label="שם האנימה" required />
-            <input
-              type="text"
-              value={formData.anime_name ?? ''}
-              onChange={(e) => updateField('anime_name', e.target.value)}
-              placeholder="הזן את שם האנימה בעברית"
-              className={cn('form-input-base', errors.anime_name && 'form-input-error')}
-              style={{ direction: 'rtl' }}
-            />
-            {errors.anime_name && <FieldError message={errors.anime_name} />}
-          </div>
-
-          {/* Anime Name EN — optional */}
-          <div>
-            <SectionLabel label="שם באנגלית / רומאג'י" optional />
-            <input
-              type="text"
-              value={formData.anime_name_en ?? ''}
-              onChange={(e) => updateField('anime_name_en', e.target.value)}
-              placeholder="English / Romaji title"
-              className="form-input-base"
-              style={{ direction: 'ltr', textAlign: 'left' }}
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={animeQuery}
+                onChange={(e) => handleAnimeQueryChange(e.target.value)}
+                onFocus={() => { if (animeResults.length > 0 && !selectedAnime) setShowDropdown(true) }}
+                placeholder="הקלד לחיפוש אנימה..."
+                className={cn('form-input-base', (errors.anime_name || errors.anime_id) && 'form-input-error')}
+                style={{ direction: 'rtl' }}
+                autoComplete="off"
+              />
+              {isSearching && (
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  מחפש...
+                </span>
+              )}
+              {selectedAnime && (
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 text-sm">✓</span>
+              )}
+            </div>
+            {showDropdown && (
+              <div className="absolute z-50 w-full mt-1 rounded-xl border border-border bg-popover shadow-xl max-h-60 overflow-y-auto">
+                {animeResults.length > 0 ? (
+                  animeResults.map((anime) => (
+                    <button
+                      key={anime.id}
+                      type="button"
+                      onClick={() => selectAnime(anime)}
+                      className="w-full text-right px-4 py-2.5 hover:bg-accent transition-colors cursor-pointer border-b border-border/50 last:border-b-0"
+                    >
+                      <span className="font-medium text-foreground">{anime.title_he}</span>
+                      {anime.title_en && (
+                        <span className="text-muted-foreground text-sm mr-2">({anime.title_en})</span>
+                      )}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                    האנימה לא נמצאה. יש לפנות לאדמין להוספה.
+                  </div>
+                )}
+              </div>
+            )}
+            {(errors.anime_name || errors.anime_id) && (
+              <FieldError message={errors.anime_name || errors.anime_id} />
+            )}
           </div>
 
           {/* Cover Image URL — optional */}

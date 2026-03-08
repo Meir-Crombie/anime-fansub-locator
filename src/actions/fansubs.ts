@@ -5,24 +5,38 @@ import { createServerClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { fansubProfileSchema } from '@/lib/validations/fansub'
 
-async function requireSuperAdmin() {
-  const supabase = createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
+async function verifyFansubAccess(
+  supabase: ReturnType<typeof createServerClient>,
+  fansubId: string,
+  userId: string
+) {
+  const { data: group } = await supabase
+    .from('fansub_groups')
+    .select('manager_uid')
+    .eq('id', fansubId)
+    .single()
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single()
-  if (profile?.role !== 'super_admin') throw new Error('Forbidden')
-  return { supabase, userId: user.id }
+  const role = profile?.role ?? ''
+  const isManagerOfGroup = group?.manager_uid === userId
+  const isAdmin = ['admin', 'super_admin'].includes(role)
+  if (!isManagerOfGroup && !isAdmin) {
+    throw new Error('Forbidden: not your group')
+  }
 }
 
 export async function deleteFansubGroup(id: string) {
   const parsed = z.string().uuid().safeParse(id)
   if (!parsed.success) return { error: 'מזהה לא תקין' }
 
-  const { supabase } = await requireSuperAdmin()
+  const supabase = createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  await verifyFansubAccess(supabase, parsed.data, user.id)
 
   const { error } = await supabase
     .from('fansub_groups')
@@ -57,6 +71,8 @@ export async function updateFansubGroup(formData: FormData) {
   if (!parsed.success) return { error: parsed.error.flatten() }
 
   const { id, ...data } = parsed.data
+
+  await verifyFansubAccess(supabase, id, user.id)
 
   // Clean empty strings to null
   const cleaned = Object.fromEntries(
