@@ -4,6 +4,9 @@ import { z } from 'zod'
 export const groupManagerFormSchema = z.object({
   anime_name: z.string().min(1, 'יש להזין שם אנימה').max(255),
   anime_name_en: z.string().max(255).optional(),
+  cover_image_url: z.string().url('קישור תמונה לא תקין').max(512).optional().or(z.literal('')),
+  genres: z.array(z.string()).optional(),
+  credits: z.string().max(500).optional(),
   status: z.enum(['ongoing', 'completed', 'dropped', 'paused']),
   platforms: z
     .array(z.enum(['website', 'telegram', 'discord', 'youtube']))
@@ -16,6 +19,7 @@ export const groupManagerFormSchema = z.object({
   notes: z.string().max(1000).optional(),
   release_date: z.string().optional(),
   quality: z.string().optional(),
+  fansub_id: z.string().uuid().optional(),
 })
 
 export type GroupManagerFormValues = z.infer<typeof groupManagerFormSchema>
@@ -24,6 +28,8 @@ export type GroupManagerFormValues = z.infer<typeof groupManagerFormSchema>
 export const userSubmissionStep0Schema = z.object({
   anime_name: z.string().min(1, 'יש להזין שם אנימה').max(255),
   anime_name_en: z.string().max(255).optional(),
+  cover_image_url: z.string().url('קישור תמונה לא תקין').max(512).optional().or(z.literal('')),
+  genres: z.array(z.string()).optional(),
 })
 
 export const userSubmissionStep1Schema = z.object({
@@ -34,6 +40,9 @@ export const userSubmissionStep1Schema = z.object({
     .refine((v) => v.startsWith('https://'), 'הקישור חייב להתחיל ב-https://'),
   platform_type: z.enum(['website', 'telegram', 'discord', 'youtube', 'other']),
   status: z.enum(['ongoing', 'completed', 'unknown']),
+  fansub_id: z.string().uuid().optional(),
+  fansub_name_custom: z.string().max(255).optional(),
+  credits: z.string().max(500).optional(),
 })
 
 export const userSubmissionStep2Schema = z.object({

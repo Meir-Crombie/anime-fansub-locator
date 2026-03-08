@@ -8,6 +8,7 @@ const ADMIN_LINKS = [
   { href: '/admin/animes', label: 'אנימות' },
   { href: '/admin/fansubs', label: 'קבוצות' },
   { href: '/admin/applications', label: 'בקשות' },
+  { href: '/admin/moderation', label: 'פיקוח' },
   { href: '/admin/analytics', label: 'אנליטיקה' },
   { href: '/admin/form-builder', label: 'טופס בקשה' },
 ] as const
@@ -31,7 +32,7 @@ export default async function AdminLayout({
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'admin') {
+  if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
     redirect('/')
   }
 

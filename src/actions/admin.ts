@@ -13,8 +13,8 @@ async function requireAdmin() {
     .select('role')
     .eq('id', user.id)
     .single()
-  if (profile?.role !== 'admin') throw new Error('Forbidden')
-  return { supabase, userId: user.id }
+  if (!profile || !['admin', 'super_admin'].includes(profile.role)) throw new Error('Forbidden')
+  return { supabase, userId: user.id, role: profile.role }
 }
 
 const uuidSchema = z.string().uuid()

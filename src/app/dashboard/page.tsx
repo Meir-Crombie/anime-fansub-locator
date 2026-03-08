@@ -1,10 +1,7 @@
 import { createServerClient } from '@/lib/supabase/server'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { TranslationBadge } from '@/components/TranslationBadge'
+import { Card, CardContent } from '@/components/ui/card'
 import EmptyState from '@/components/EmptyState'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Star, Plus } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
@@ -26,11 +23,10 @@ export default async function DashboardPage() {
       announcements (id, title, type, created_at, is_published)
     `)
     .eq('manager_uid', user!.id)
-    .limit(1)
 
-  const fansub = fansubs?.[0] ?? null
+  const allFansubs = fansubs ?? []
 
-  if (!fansub) {
+  if (allFansubs.length === 0) {
     return (
       <main className="container mx-auto max-w-4xl px-4 py-12 text-center space-y-4">
         <h1 className="text-2xl font-bold">לוח בקרה</h1>
@@ -46,6 +42,9 @@ export default async function DashboardPage() {
       </main>
     )
   }
+
+  // Use first fansub as default
+  const fansub = allFansubs[0]
 
   // Get ratings for stats
   const { data: allRatingsData } = await supabase
@@ -84,7 +83,6 @@ export default async function DashboardPage() {
 
   const completedCount = translations.filter((t) => t.status === 'completed').length
   const ongoingCount = translations.filter((t) => t.status === 'ongoing').length
-  const droppedCount = translations.filter((t) => t.status === 'dropped').length
 
   const ratingCount = allRatingsData?.length ?? 0
   const ratingTotal = allRatingsData?.reduce((sum, r) => sum + r.score, 0) ?? 0
@@ -92,14 +90,23 @@ export default async function DashboardPage() {
     ? (ratingTotal / ratingCount).toFixed(1)
     : null
 
+  // Build group names for multi-group switcher
+  const groupOptions = allFansubs.map((f) => ({ id: f.id, name: f.name }))
+
   return (
     <main className="container mx-auto max-w-4xl px-4 py-8 space-y-8">
       <div>
         <h1 className="text-2xl font-bold">לוח בקרה</h1>
-        <p className="text-muted-foreground">{fansub.name}</p>
+        {allFansubs.length > 1 ? (
+          <p className="text-sm text-muted-foreground mt-1">
+            מנהל {allFansubs.length} קבוצות — מציג: {fansub.name}
+          </p>
+        ) : (
+          <p className="text-muted-foreground">{fansub.name}</p>
+        )}
       </div>
 
-      {/* Section 4: Stats */}
+      {/* Stats */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card>
           <CardContent className="py-4 text-center">
@@ -130,10 +137,9 @@ export default async function DashboardPage() {
         </Card>
       </section>
 
-      {/* Section 1: Group Details — editable via DashboardClient */}
       <DashboardClient fansub={fansub} translations={translations} announcements={announcements} />
 
-      {/* Section 4 cont: Latest Reviews */}
+      {/* Latest Reviews */}
       {ratings && ratings.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-xl font-semibold">ביקורות אחרונות</h2>

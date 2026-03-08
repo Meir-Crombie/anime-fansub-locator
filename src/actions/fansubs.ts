@@ -5,6 +5,38 @@ import { createServerClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { fansubProfileSchema } from '@/lib/validations/fansub'
 
+async function requireSuperAdmin() {
+  const supabase = createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (profile?.role !== 'super_admin') throw new Error('Forbidden')
+  return { supabase, userId: user.id }
+}
+
+export async function deleteFansubGroup(id: string) {
+  const parsed = z.string().uuid().safeParse(id)
+  if (!parsed.success) return { error: 'מזהה לא תקין' }
+
+  const { supabase } = await requireSuperAdmin()
+
+  const { error } = await supabase
+    .from('fansub_groups')
+    .delete()
+    .eq('id', parsed.data)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/fansubs')
+  revalidatePath('/fansubs')
+  revalidatePath('/')
+  return { error: null }
+}
+
 const updateFansubSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1).max(255),

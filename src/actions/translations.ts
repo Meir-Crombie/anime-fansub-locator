@@ -35,7 +35,7 @@ async function verifyManager(
     .select('role')
     .eq('id', userId)
     .single()
-  if (group?.manager_uid !== userId && profile?.role !== 'admin') {
+  if (group?.manager_uid !== userId && !['admin', 'super_admin'].includes(profile?.role ?? '')) {
     throw new Error('Forbidden: not your group')
   }
 }
@@ -136,29 +136,36 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
   const parsed = groupManagerFormSchema.safeParse(formData)
   if (!parsed.success) return { error: parsed.error.flatten() }
 
-  // Get manager's fansub group
-  const { data: fansubs } = await supabase
-    .from('fansub_groups')
-    .select('id')
-    .eq('manager_uid', user.id)
-    .limit(1)
+  // Determine fansub — accept fansub_id from form or find manager's own group
+  let fansubId: string | null = null
 
-  const fansub = fansubs?.[0] ?? null
-
-  if (!fansub) {
-    // Check if admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
-      throw new Error('Forbidden: no fansub group found')
-    }
-    throw new Error('Admin must use the admin panel to manage translations')
+  if (typeof formData.fansub_id === 'string' && formData.fansub_id) {
+    fansubId = formData.fansub_id
+  } else {
+    const { data: fansubs } = await supabase
+      .from('fansub_groups')
+      .select('id')
+      .eq('manager_uid', user.id)
+      .limit(1)
+    fansubId = fansubs?.[0]?.id ?? null
   }
 
-  // Upsert anime by Hebrew name
+  if (!fansubId) {
+    return { error: { formErrors: ['לא נמצאה קבוצת פאנסאב משויכת. יש לבחור קבוצה.'], fieldErrors: {} } }
+  }
+
+  // Verify that the user can write to this fansub
+  await verifyManager(supabase, fansubId, user.id)
+
+  // Get user role to decide if they can create animes
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  const isAdmin = ['admin', 'super_admin'].includes(profile?.role ?? '')
+
+  // Find existing anime by Hebrew name
   const { data: existing } = await supabase
     .from('animes')
     .select('id')
@@ -169,17 +176,37 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
 
   if (existing) {
     animeId = existing.id
-  } else {
+    // Update cover_image_url if provided and anime exists
+    if (parsed.data.cover_image_url) {
+      if (isAdmin) {
+        await supabase
+          .from('animes')
+          .update({ cover_image_url: parsed.data.cover_image_url })
+          .eq('id', animeId)
+      }
+    }
+  } else if (isAdmin) {
+    // Only admins can create new anime entries
+    const insertData: { title_he: string; title_en: string; cover_image_url?: string; genres?: string[] } = {
+      title_he: parsed.data.anime_name.trim(),
+      title_en: parsed.data.anime_name_en?.trim() ?? '',
+    }
+    if (parsed.data.cover_image_url) {
+      insertData.cover_image_url = parsed.data.cover_image_url
+    }
+    if (parsed.data.genres && parsed.data.genres.length > 0) {
+      insertData.genres = parsed.data.genres
+    }
     const { data: newAnime, error: animeError } = await supabase
       .from('animes')
-      .insert({
-        title_he: parsed.data.anime_name.trim(),
-        title_en: parsed.data.anime_name_en?.trim() ?? '',
-      })
+      .insert(insertData)
       .select('id')
       .single()
     if (animeError || !newAnime) throw new Error(animeError?.message ?? 'Failed to create anime')
     animeId = newAnime.id
+  } else {
+    // Manager: anime doesn't exist — return error
+    return { error: { formErrors: ['האנימה לא נמצאה במאגר. פנה למנהל כדי להוסיף אותה.'], fieldErrors: {} } }
   }
 
   // Build notes from optional fields
@@ -187,6 +214,7 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
   if (parsed.data.episode_range) notesParts.push(`פרקים: ${parsed.data.episode_range}`)
   if (parsed.data.release_date) notesParts.push(`תאריך: ${parsed.data.release_date}`)
   if (parsed.data.quality) notesParts.push(`איכות: ${parsed.data.quality}`)
+  if (parsed.data.credits) notesParts.push(`קרדיטים: ${parsed.data.credits}`)
   if (parsed.data.notes) notesParts.push(parsed.data.notes)
   const combinedNotes = notesParts.length > 0 ? notesParts.join(' | ') : null
 
@@ -201,7 +229,7 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
     .from('translations')
     .upsert({
       anime_id: animeId,
-      fansub_id: fansub.id,
+      fansub_id: fansubId,
       status: validStatus,
       platform: primaryPlatform,
       direct_link: parsed.data.direct_link,
@@ -214,7 +242,7 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
 
   revalidatePath(`/anime/${animeId}`)
   revalidatePath('/dashboard')
-  revalidatePath(`/fansub/${fansub.id}`)
+  revalidatePath(`/fansub/${fansubId}`)
   revalidatePath('/')
   return { error: null, animeId }
 }

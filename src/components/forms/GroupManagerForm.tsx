@@ -7,6 +7,7 @@ import {
   groupManagerFormSchema,
   type GroupManagerFormValues,
 } from '@/lib/validations/submission'
+import { GENRES } from '@/lib/constants'
 
 const STATUS_OPTIONS = [
   { value: 'ongoing', label: 'בתרגום פעיל', color: '#22c55e', icon: '⚡' },
@@ -159,6 +160,66 @@ export default function GroupManagerForm({ fansubName }: GroupManagerFormProps) 
               placeholder="English / Romaji title"
               className="form-input-base"
               style={{ direction: 'ltr', textAlign: 'left' }}
+            />
+          </div>
+
+          {/* Cover Image URL */}
+          <div>
+            <SectionLabel label="קישור לתמונת כיסוי" optional />
+            <input
+              type="url"
+              value={(formData as Record<string, unknown>).cover_image_url as string ?? ''}
+              onChange={(e) => updateField('cover_image_url' as keyof GroupManagerFormValues, e.target.value as never)}
+              placeholder="https://example.com/cover.jpg"
+              className="form-input-base"
+              style={{ direction: 'ltr', textAlign: 'left' }}
+            />
+          </div>
+
+          {/* Genres */}
+          <div>
+            <SectionLabel label="ז'אנרים" optional />
+            <div className="flex flex-wrap gap-2">
+              {GENRES.map((genre) => {
+                const selected = ((formData as Record<string, unknown>).genres as string[] ?? []).includes(genre.value)
+                return (
+                  <button
+                    key={genre.value}
+                    type="button"
+                    onClick={() => {
+                      const current = ((formData as Record<string, unknown>).genres as string[]) ?? []
+                      const next = selected
+                        ? current.filter((g) => g !== genre.value)
+                        : [...current, genre.value]
+                      updateField('genres' as keyof GroupManagerFormValues, next as never)
+                    }}
+                    className="transition-all duration-200 cursor-pointer font-heebo"
+                    style={{
+                      padding: '0.35rem 0.8rem',
+                      borderRadius: '999px',
+                      border: `1.5px solid ${selected ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
+                      background: selected ? 'hsl(var(--primary) / 0.15)' : 'transparent',
+                      color: selected ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
+                      fontSize: '0.82rem',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {genre.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Credits */}
+          <div>
+            <SectionLabel label="קרדיטים" optional />
+            <input
+              type="text"
+              value={(formData as Record<string, unknown>).credits as string ?? ''}
+              onChange={(e) => updateField('credits' as keyof GroupManagerFormValues, e.target.value as never)}
+              placeholder="תרגום: פלוני, עריכה: אלמוני"
+              className="form-input-base"
             />
           </div>
 

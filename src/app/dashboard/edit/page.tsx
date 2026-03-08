@@ -19,20 +19,25 @@ export default async function DashboardEditPage() {
     redirect('/dashboard')
   }
 
-  // Try to find the user's own fansub group
+  // Find all fansub groups this user manages
   const { data: ownFansubs } = await supabase
     .from('fansub_groups')
     .select('id, name')
     .eq('manager_uid', user.id)
-    .limit(1)
 
-  const ownFansub = ownFansubs?.[0] ?? null
+  const ownFansubList = (ownFansubs ?? []) as { id: string; name: string }[]
 
-  if (ownFansub) {
-    return <GroupManagerForm fansubId={ownFansub.id} fansubName={ownFansub.name} />
+  // If manager has exactly one group, go directly to the form
+  if (ownFansubList.length === 1) {
+    return <GroupManagerForm fansubId={ownFansubList[0].id} fansubName={ownFansubList[0].name} />
   }
 
-  // Admin without own group — let them pick any active group
+  // If manager has multiple groups, let them pick
+  if (ownFansubList.length > 1) {
+    return <FansubSelector fansubs={ownFansubList} />
+  }
+
+  // Admin/super_admin without own group — let them pick any active group
   if (profile.role === 'admin' || profile.role === 'super_admin') {
     const { data: allFansubs } = await supabase
       .from('fansub_groups')

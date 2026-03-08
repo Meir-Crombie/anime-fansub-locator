@@ -8,6 +8,7 @@ import {
   userSubmissionStep1Schema,
   type UserSubmissionFormValues,
 } from '@/lib/validations/submission'
+import { GENRES } from '@/lib/constants'
 
 const TOTAL_STEPS = 4
 
@@ -208,6 +209,50 @@ export default function UserSubmissionForm() {
                   style={{ direction: 'ltr', textAlign: 'left' }}
                 />
               </div>
+              <div>
+                <SectionLabel label="קישור לתמונת כיסוי" />
+                <input
+                  type="url"
+                  value={(formData as Record<string, unknown>).cover_image_url as string ?? ''}
+                  onChange={(e) => updateField('cover_image_url' as keyof UserSubmissionFormValues, e.target.value as never)}
+                  placeholder="https://example.com/cover.jpg"
+                  className="usf-input"
+                  style={{ direction: 'ltr', textAlign: 'left' }}
+                />
+              </div>
+              <div>
+                <SectionLabel label="ז'אנרים" />
+                <div className="flex flex-wrap gap-2">
+                  {GENRES.map((genre) => {
+                    const selected = ((formData as Record<string, unknown>).genres as string[] ?? []).includes(genre.value)
+                    return (
+                      <button
+                        key={genre.value}
+                        type="button"
+                        onClick={() => {
+                          const current = ((formData as Record<string, unknown>).genres as string[]) ?? []
+                          const next = selected
+                            ? current.filter((g) => g !== genre.value)
+                            : [...current, genre.value]
+                          updateField('genres' as keyof UserSubmissionFormValues, next as never)
+                        }}
+                        className="transition-all duration-200 cursor-pointer font-heebo"
+                        style={{
+                          padding: '0.35rem 0.8rem',
+                          borderRadius: '999px',
+                          border: `1.5px solid ${selected ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
+                          background: selected ? 'hsl(var(--primary) / 0.15)' : 'transparent',
+                          color: selected ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
+                          fontSize: '0.82rem',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {genre.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           )}
 
@@ -319,6 +364,18 @@ export default function UserSubmissionForm() {
                 </div>
                 {errors.status && <FieldError message={errors.status} />}
               </div>
+
+              {/* Credits */}
+              <div>
+                <SectionLabel label="קרדיטים" />
+                <input
+                  type="text"
+                  value={(formData as Record<string, unknown>).credits as string ?? ''}
+                  onChange={(e) => updateField('credits' as keyof UserSubmissionFormValues, e.target.value as never)}
+                  placeholder="תרגום: פלוני, עריכה: אלמוני"
+                  className="usf-input"
+                />
+              </div>
             </div>
           )}
 
@@ -414,6 +471,15 @@ export default function UserSubmissionForm() {
                     QUALITY_OPTIONS.find((q) => q.value === formData.language_quality)?.label
                   }
                 />
+              )}
+              {Boolean((formData as Record<string, unknown>).cover_image_url) && (
+                <ReviewRow label="תמונת כיסוי" value={(formData as Record<string, unknown>).cover_image_url as string} ltr />
+              )}
+              {((formData as Record<string, unknown>).genres as string[] ?? []).length > 0 && (
+                <ReviewRow label="ז'אנרים" value={((formData as Record<string, unknown>).genres as string[]).join(', ')} />
+              )}
+              {Boolean((formData as Record<string, unknown>).credits) && (
+                <ReviewRow label="קרדיטים" value={(formData as Record<string, unknown>).credits as string} />
               )}
             </div>
           )}

@@ -20,6 +20,10 @@ export async function createUserSubmission(formData: Record<string, unknown>) {
     status: parsed.data.status,
     description: parsed.data.description ?? null,
     language_quality: parsed.data.language_quality ?? null,
+    cover_image_url: parsed.data.cover_image_url?.trim() || null,
+    genres: parsed.data.genres ?? [],
+    credits: parsed.data.credits?.trim() || null,
+    fansub_name_custom: parsed.data.fansub_name_custom?.trim() || null,
     submitted_by: user.id,
     is_verified: false,
   })

@@ -2,12 +2,22 @@ import { createServerClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import EmptyState from '@/components/EmptyState'
+import DeleteFansubButton from './DeleteFansubButton'
 import type { FansubGroup } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminFansubsPage() {
   const supabase = createServerClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user!.id)
+    .single()
+
+  const isSuperAdmin = profile?.role === 'super_admin'
 
   const { data: fansubs, error } = await supabase
     .from('fansub_groups')
@@ -41,6 +51,11 @@ export default async function AdminFansubsPage() {
                   <Badge variant={fansub.is_active ? 'default' : 'secondary'}>
                     {fansub.is_active ? 'פעיל' : 'לא פעיל'}
                   </Badge>
+                  {isSuperAdmin && (
+                    <div className="ms-auto">
+                      <DeleteFansubButton fansubId={fansub.id} fansubName={fansub.name} />
+                    </div>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="py-2 text-sm text-muted-foreground">

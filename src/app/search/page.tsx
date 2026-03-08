@@ -1,4 +1,5 @@
 import { createServerClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import AnimeGrid from '@/components/AnimeGrid'
 import type { Metadata } from 'next'
 
@@ -64,6 +65,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     genres: a.genres ?? [],
     similarity_score: 1,
   }))
+
+  // If no results found, redirect to /animes with the query pre-filled
+  if (results.length === 0) {
+    redirect(`/animes?q=${encodeURIComponent(query)}`)
+  }
 
   return (
     <main className="container mx-auto max-w-6xl px-4 py-12 space-y-6">
