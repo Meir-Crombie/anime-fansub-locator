@@ -87,25 +87,26 @@ export default function TranslationList({ translations, communitySubmissions = [
                {fansubTranslations.find(t => t.notes)?.notes}
             </div>
 
-            {/* צד שמאל: כפתורים */}
-            <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+            {/* צד שמאל: כפתורי פלטפורמות קומפקטיים */}
+            <div className="flex flex-wrap items-center justify-end gap-1 shrink-0">
               {fansubTranslations.map((t) => (
-                <Button 
-                  key={t.id} 
-                  variant="default" 
-                  size="sm" 
-                  asChild 
-                  className="shrink-0 font-medium bg-[#0ea5e9] hover:bg-[#0284c7] text-white transition-colors"
+                <Button
+                  key={t.id}
+                  variant="outline"
+                  size="icon"
+                  asChild
+                  className="shrink-0 p-2 h-8 w-8 md:w-auto md:px-3 md:h-8 text-primary border-primary hover:bg-primary/10 transition-colors relative group"
+                  title={PLATFORM_LABELS[t.platform] ?? t.platform}
                 >
                   <a
                     href={t.direct_link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2"
+                    className="flex items-center justify-center gap-1 md:gap-2"
                   >
                     {getPlatformIcon(t.platform)}
-                    <span>{PLATFORM_LABELS[t.platform] ?? t.platform}</span>
-                    <ExternalLink className="h-4 w-4" /> {/* חץ ההעברה המבוקש */}
+                    <span className="hidden md:inline text-xs font-normal">{PLATFORM_LABELS[t.platform] ?? t.platform}</span>
+                    <ExternalLink className="h-3 w-3 md:h-4 md:w-4 opacity-70" />
                   </a>
                 </Button>
               ))}
