@@ -34,7 +34,7 @@ interface GroupManagerFormProps {
   fansubName: string
 }
 
-export default function GroupManagerForm({ fansubName }: GroupManagerFormProps) {
+export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerFormProps) {
   const [formData, setFormData] = useState<Partial<GroupManagerFormValues>>({
     platforms: [],
   })
@@ -81,7 +81,7 @@ export default function GroupManagerForm({ fansubName }: GroupManagerFormProps) 
 
     setIsSubmitting(true)
     try {
-      const result = await submitManagerTranslation(validated.data)
+      const result = await submitManagerTranslation({ ...validated.data, fansub_id: fansubId })
       if (result?.error) {
         setErrors({ _form: 'שגיאה בשמירת הנתונים. בדוק את כל השדות.' })
       } else {

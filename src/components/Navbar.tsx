@@ -26,7 +26,7 @@ import type { User } from '@supabase/supabase-js'
 
 const NAV_LINKS: { href: string; label: string }[] = [
   { href: '/', label: 'דף הבית' },
-  { href: '/search', label: 'אנימות' },
+  { href: '/animes', label: 'אנימות' },
   { href: '/fansubs', label: 'קבוצות' },
 ]
 
@@ -106,7 +106,7 @@ export default function Navbar({ initialLoggedIn, initialEmail, initialRole }: N
     router.push('/')
   }
 
-  const isAdmin = role === 'admin'
+  const isAdmin = role === 'admin' || role === 'super_admin'
   const isManager = role === 'manager'
   const loggedIn = user ? true : isLoggedIn
   const displayEmail = user?.email ?? email
