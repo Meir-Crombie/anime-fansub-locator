@@ -4,7 +4,7 @@ import { createServerClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
-const schema = z.object({ query: z.string().min(2).max(200) })
+const schema = z.object({ query: z.string().min(1).max(200) })
 
 export async function POST(req: NextRequest) {
   let body: unknown

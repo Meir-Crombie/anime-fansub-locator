@@ -2,9 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Image from 'next/image'
-import { Search, Loader2, Users } from 'lucide-react'
-import { SEARCH_MIN_LENGTH, SEARCH_DEBOUNCE_MS } from '@/lib/constants'
+import { Search, Loader2, Users, ArrowLeft } from 'lucide-react'
+import { SEARCH_DEBOUNCE_MS } from '@/lib/constants'
+
+const SMART_SEARCH_MIN = 1
 
 type SearchMode = 'anime' | 'fansub'
 
@@ -21,6 +24,7 @@ interface FansubResult {
   id: string
   name: string
   logo_url: string | null
+  description: string | null
   similarity: number
 }
 
@@ -48,16 +52,20 @@ export default function SearchBar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const [crossModeCount, setCrossModeCount] = useState<number | null>(null)
+
   const performSearch = useCallback(async (searchQuery: string) => {
-    if (searchQuery.length < SEARCH_MIN_LENGTH) {
+    if (searchQuery.length < SMART_SEARCH_MIN) {
       setAnimeResults([])
       setFansubResults([])
       setIsOpen(false)
+      setCrossModeCount(null)
       return
     }
 
     setIsLoading(true)
     setError(null)
+    setCrossModeCount(null)
 
     try {
       const endpoint = mode === 'anime' ? '/api/search' : '/api/search-fansubs'
@@ -77,10 +85,36 @@ export default function SearchBar() {
         setAnimeResults(json.data ?? [])
         setFansubResults([])
         setIsOpen(true)
+
+        // Cross-mode: check fansubs too if no anime results
+        if ((!json.data || json.data.length === 0) && searchQuery.length >= 2) {
+          const crossRes = await fetch('/api/search-fansubs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: searchQuery }),
+          })
+          const crossJson = await crossRes.json()
+          if (crossRes.ok && crossJson.data?.length > 0) {
+            setCrossModeCount(crossJson.data.length)
+          }
+        }
       } else {
         setFansubResults(json.data ?? [])
         setAnimeResults([])
         setIsOpen(true)
+
+        // Cross-mode: check anime too if no fansub results
+        if ((!json.data || json.data.length === 0) && searchQuery.length >= 2) {
+          const crossRes = await fetch('/api/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: searchQuery }),
+          })
+          const crossJson = await crossRes.json()
+          if (crossRes.ok && crossJson.data?.length > 0) {
+            setCrossModeCount(crossJson.data.length)
+          }
+        }
       }
     } catch {
       setError('שגיאת רשת. נסה שוב.')
@@ -102,6 +136,7 @@ export default function SearchBar() {
       setFansubResults([])
       setIsOpen(false)
       setError(null)
+      setCrossModeCount(null)
       return
     }
 
@@ -124,7 +159,8 @@ export default function SearchBar() {
     setFansubResults([])
     setIsOpen(false)
     setSelectedIndex(-1)
-    if (query.trim().length >= SEARCH_MIN_LENGTH) {
+    setCrossModeCount(null)
+    if (query.trim().length >= SMART_SEARCH_MIN) {
       // Re-search with the new mode after state update
       setTimeout(() => performSearch(query.trim()), 0)
     }
@@ -132,8 +168,12 @@ export default function SearchBar() {
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (!isOpen || results.length === 0) {
-      if (e.key === 'Enter' && query.trim().length >= SEARCH_MIN_LENGTH) {
-        router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+      if (e.key === 'Enter' && query.trim().length >= SMART_SEARCH_MIN) {
+        if (mode === 'anime') {
+          router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+        } else {
+          router.push('/fansubs')
+        }
       }
       return
     }
@@ -151,8 +191,10 @@ export default function SearchBar() {
         e.preventDefault()
         if (selectedIndex >= 0 && selectedIndex < results.length) {
           selectResult(results[selectedIndex].id)
-        } else {
+        } else if (mode === 'anime') {
           router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+        } else {
+          router.push('/fansubs')
         }
         break
       case 'Escape':
@@ -211,9 +253,9 @@ export default function SearchBar() {
       </div>
 
       {/* Validation message */}
-      {query.length > 0 && query.length < SEARCH_MIN_LENGTH && (
+      {query.length > 0 && query.length < SMART_SEARCH_MIN && (
         <p className="mt-1 text-xs text-muted-foreground text-center">
-          הכנס לפחות {SEARCH_MIN_LENGTH} תווים
+          הכנס לפחות {SMART_SEARCH_MIN} תווים
         </p>
       )}
 
@@ -277,6 +319,11 @@ export default function SearchBar() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-sm truncate">{(result as FansubResult).name}</p>
+                        {(result as FansubResult).description && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {(result as FansubResult).description}
+                          </p>
+                        )}
                       </div>
                     </>
                   )}
@@ -284,13 +331,48 @@ export default function SearchBar() {
               ))}
             </ul>
           ) : (
-            !isLoading && query.length >= SEARCH_MIN_LENGTH && (
-              <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                לא נמצאו תוצאות עבור &ldquo;{query}&rdquo;
-                <br />
-                <span className="text-xs">חיפוש זה נשמר למאגר הרצונות</span>
+            !isLoading && query.length >= SMART_SEARCH_MIN && (
+              <div className="px-4 py-6 text-center text-sm text-muted-foreground space-y-2">
+                <p>לא נמצאו תוצאות עבור &ldquo;{query}&rdquo;</p>
+                {query.length >= 2 && (
+                  <p className="text-xs">חיפוש זה נשמר למאגר הרצונות</p>
+                )}
+                {crossModeCount !== null && crossModeCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange(mode === 'anime' ? 'fansub' : 'anime')}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {mode === 'anime'
+                      ? `נמצאו ${crossModeCount} תוצאות בקבוצות פאנסאב — לחץ לעבור`
+                      : `נמצאו ${crossModeCount} תוצאות באנימה — לחץ לעבור`}
+                  </button>
+                )}
+                <div>
+                  <Link
+                    href={mode === 'anime' ? `/search?q=${encodeURIComponent(query.trim())}` : '/fansubs'}
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    {mode === 'anime' ? 'חפש בעמוד החיפוש המלא' : 'צפה בכל הקבוצות'}
+                    <ArrowLeft className="h-3 w-3" aria-hidden />
+                  </Link>
+                </div>
               </div>
             )
+          )}
+
+          {/* View-all footer */}
+          {results.length > 0 && (
+            <div className="border-t border-border">
+              <Link
+                href={mode === 'anime' ? `/search?q=${encodeURIComponent(query.trim())}` : '/fansubs'}
+                onClick={() => setIsOpen(false)}
+                className="flex items-center justify-center gap-1 px-4 py-2.5 text-xs text-primary hover:bg-accent/50 transition-colors"
+              >
+                {mode === 'anime' ? 'הצג את כל התוצאות' : 'צפה בכל הקבוצות'}
+                <ArrowLeft className="h-3 w-3" aria-hidden />
+              </Link>
+            </div>
           )}
         </div>
       )}

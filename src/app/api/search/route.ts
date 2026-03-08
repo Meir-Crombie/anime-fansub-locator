@@ -5,7 +5,7 @@ import { createServerClient } from '@/lib/supabase/server'
 export const dynamic = 'force-dynamic'
 
 const schema = z.object({
-  query: z.string().min(2).max(200),
+  query: z.string().min(1).max(200),
 })
 
 export async function POST(req: NextRequest) {
@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Log unsatisfied searches to analytics
-  if (!data || data.length === 0) {
+  // Log unsatisfied searches to analytics (only for meaningful queries)
+  if ((!data || data.length === 0) && searchQuery.length >= 2) {
     await supabase.rpc('increment_search_count', {
       p_query: searchQuery,
     })
