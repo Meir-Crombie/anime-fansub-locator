@@ -117,21 +117,6 @@ export default async function AnimePage({ params }: AnimePageProps) {
         )}
       </div>
 
-      {/* Big Watch Button */}
-      {(anime.translations?.length > 0 || uniqueSubmissions.length > 0) && (
-        <div className="mt-10 flex justify-center">
-          <a
-            href={anime.translations?.[0]?.direct_link ?? uniqueSubmissions[0]?.translation_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 text-white text-xl font-bold py-6 px-8 rounded-xl w-full max-w-sm transition-all duration-200 hover:-translate-y-0.5"
-            style={{ boxShadow: '0 4px 14px hsl(var(--primary) / 0.35)' }}
-          >
-            ▶ צפייה עכשיו
-          </a>
-        </div>
-      )}
-
       {/* Translations */}
       <section className="mt-12 space-y-4">
         <div className="flex items-center justify-between">
