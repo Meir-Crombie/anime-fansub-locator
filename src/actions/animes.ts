@@ -82,22 +82,37 @@ export async function deleteAnime(id: string) {
   return { error: null }
 }
 
-const updateAnimeCoverSchema = z.object({
+const updateAnimeDetailsSchema = z.object({
   anime_id: z.string().uuid(),
   cover_image_url: z.string().url().max(512).optional().or(z.literal('')),
+  genres: z.array(z.string()).optional(),
+  synopsis: z.string().max(2000).optional(),
 })
 
-export async function updateAnimeCoverImage(data: { anime_id: string; cover_image_url: string }) {
-  const parsed = updateAnimeCoverSchema.safeParse(data)
+export async function updateAnimeDetails(data: { anime_id: string; cover_image_url?: string; genres?: string[]; synopsis?: string }) {
+  const parsed = updateAnimeDetailsSchema.safeParse(data)
   if (!parsed.success) return { error: 'נתונים לא תקינים' }
 
   const supabase = createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
+  const updates: Record<string, unknown> = {}
+  if (parsed.data.cover_image_url !== undefined) {
+    updates.cover_image_url = parsed.data.cover_image_url || null
+  }
+  if (parsed.data.genres !== undefined) {
+    updates.genres = parsed.data.genres
+  }
+  if (parsed.data.synopsis !== undefined) {
+    updates.synopsis = parsed.data.synopsis || null
+  }
+
+  if (Object.keys(updates).length === 0) return { error: null }
+
   const { error } = await supabase
     .from('animes')
-    .update({ cover_image_url: parsed.data.cover_image_url || null })
+    .update(updates)
     .eq('id', parsed.data.anime_id)
 
   if (error) return { error: error.message }

@@ -24,7 +24,7 @@ export default async function DashboardPage() {
       translations (
         id, status, platform, direct_link, notes, updated_at,
         episode_progress (translated_episodes, total_episodes, last_episode_at),
-        animes (id, title_he, title_en, cover_image_url)
+        animes (id, title_he, title_en, cover_image_url, genres, synopsis)
       ),
       announcements (id, title, type, created_at, is_published)
     `)
@@ -41,7 +41,7 @@ export default async function DashboardPage() {
         translations (
           id, status, platform, direct_link, notes, updated_at,
           episode_progress (translated_episodes, total_episodes, last_episode_at),
-          animes (id, title_he, title_en, cover_image_url)
+          animes (id, title_he, title_en, cover_image_url, genres, synopsis)
         ),
         announcements (id, title, type, created_at, is_published)
       `)
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
     notes: string | null
     updated_at: string
     episode_progress: { translated_episodes: number; total_episodes: number | null; last_episode_at: string | null }[] | null
-    animes: { id: string; title_he: string; title_en: string; cover_image_url: string | null } | null
+    animes: { id: string; title_he: string; title_en: string; cover_image_url: string | null; genres: string[]; synopsis: string | null } | null
   }
 
   type AnnouncementRow = {

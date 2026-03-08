@@ -7,7 +7,8 @@ import Image from 'next/image'
 import { updateFansubGroup, deleteFansubGroup } from '@/actions/fansubs'
 import { deleteTranslation, updateTranslation, updateEpisodeProgress } from '@/actions/translations'
 import { createAnnouncement, toggleAnnouncementPublished, deleteAnnouncement } from '@/actions/announcements'
-import { updateAnimeCoverImage } from '@/actions/animes'
+import { updateAnimeDetails } from '@/actions/animes'
+import { GENRES } from '@/lib/constants'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -29,7 +30,7 @@ type TranslationRow = {
   notes: string | null
   updated_at: string
   episode_progress: { translated_episodes: number; total_episodes: number | null }[] | null
-  animes: { id: string; title_he: string; title_en: string; cover_image_url: string | null } | null
+  animes: { id: string; title_he: string; title_en: string; cover_image_url: string | null; genres: string[]; synopsis: string | null } | null
 }
 
 type AnnouncementRow = {
@@ -81,6 +82,13 @@ const PLATFORM_LABELS: Record<string, string> = {
   youtube: 'יוטיוב',
 }
 
+const QUALITY_OPTIONS = [
+  { value: 'bluray', label: 'Blu-ray' },
+  { value: 'web', label: 'WEB' },
+  { value: 'tv', label: 'TV' },
+  { value: 'dvd', label: 'DVD' },
+]
+
 export default function DashboardClient({
   allGroups,
   groupDataMap,
@@ -109,7 +117,12 @@ export default function DashboardClient({
 
   // Inline translation edit state
   const [editingTranslationId, setEditingTranslationId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState({ status: '', platform: '', direct_link: '', notes: '', translated_episodes: 0, total_episodes: '', cover_image_url: '' })
+  const [editForm, setEditForm] = useState({
+    status: '', platform: '', direct_link: '', notes: '',
+    translated_episodes: 0, total_episodes: '',
+    cover_image_url: '', genres: [] as string[], synopsis: '',
+    credits: '', episode_range: '', quality: '',
+  })
   const [isSavingTranslation, setIsSavingTranslation] = useState(false)
 
   // Announcements form state
@@ -132,15 +145,33 @@ export default function DashboardClient({
 
   function startEditTranslation(t: TranslationRow) {
     const progress = t.episode_progress?.[0]
+    // Parse structured fields from notes
+    const notes = t.notes ?? ''
+    const parts = notes.split(' | ')
+    let credits = ''
+    let episodeRange = ''
+    let quality = ''
+    const otherParts: string[] = []
+    for (const part of parts) {
+      if (part.startsWith('קרדיטים: ')) credits = part.replace('קרדיטים: ', '')
+      else if (part.startsWith('פרקים: ')) episodeRange = part.replace('פרקים: ', '')
+      else if (part.startsWith('איכות: ')) quality = part.replace('איכות: ', '')
+      else if (!part.startsWith('תאריך: ')) otherParts.push(part)
+    }
     setEditingTranslationId(t.id)
     setEditForm({
       status: t.status,
       platform: t.platform,
       direct_link: t.direct_link,
-      notes: t.notes ?? '',
+      notes: otherParts.join(' | '),
       translated_episodes: progress?.translated_episodes ?? 0,
       total_episodes: progress?.total_episodes?.toString() ?? '',
       cover_image_url: t.animes?.cover_image_url ?? '',
+      genres: t.animes?.genres ?? [],
+      synopsis: t.animes?.synopsis ?? '',
+      credits,
+      episode_range: episodeRange,
+      quality,
     })
   }
 
@@ -148,12 +179,21 @@ export default function DashboardClient({
     if (!editingTranslationId) return
     setIsSavingTranslation(true)
     const currentTranslation = translations.find((t) => t.id === editingTranslationId)
+
+    // Build combined notes from structured fields
+    const notesParts: string[] = []
+    if (editForm.episode_range) notesParts.push(`פרקים: ${editForm.episode_range}`)
+    if (editForm.quality) notesParts.push(`איכות: ${editForm.quality}`)
+    if (editForm.credits) notesParts.push(`קרדיטים: ${editForm.credits}`)
+    if (editForm.notes) notesParts.push(editForm.notes)
+    const combinedNotes = notesParts.length > 0 ? notesParts.join(' | ') : null
+
     const result = await updateTranslation({
       id: editingTranslationId,
       status: editForm.status,
       platform: editForm.platform,
       direct_link: editForm.direct_link,
-      notes: editForm.notes || null,
+      notes: combinedNotes,
     })
     // Also update episode progress
     const totalEp = editForm.total_episodes ? parseInt(editForm.total_episodes, 10) : null
@@ -162,12 +202,19 @@ export default function DashboardClient({
       translated_episodes: editForm.translated_episodes,
       total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
     })
-    // Update anime cover image if changed
-    if (currentTranslation?.animes && editForm.cover_image_url !== (currentTranslation.animes.cover_image_url ?? '')) {
-      await updateAnimeCoverImage({
-        anime_id: currentTranslation.animes.id,
-        cover_image_url: editForm.cover_image_url,
-      })
+    // Update anime details (cover image + genres) if changed
+    if (currentTranslation?.animes) {
+      const coverChanged = editForm.cover_image_url !== (currentTranslation.animes.cover_image_url ?? '')
+      const genresChanged = JSON.stringify(editForm.genres) !== JSON.stringify(currentTranslation.animes.genres ?? [])
+      const synopsisChanged = editForm.synopsis !== (currentTranslation.animes.synopsis ?? '')
+      if (coverChanged || genresChanged || synopsisChanged) {
+        await updateAnimeDetails({
+          anime_id: currentTranslation.animes.id,
+          cover_image_url: editForm.cover_image_url,
+          genres: editForm.genres,
+          synopsis: editForm.synopsis,
+        })
+      }
     }
     if (!result.error) {
       setTranslationsMap((prev) => ({
@@ -179,12 +226,12 @@ export default function DashboardClient({
                 status: editForm.status as TranslationRow['status'],
                 platform: editForm.platform as TranslationRow['platform'],
                 direct_link: editForm.direct_link,
-                notes: editForm.notes || null,
+                notes: combinedNotes,
                 episode_progress: [{
                   translated_episodes: editForm.translated_episodes,
                   total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
                 }],
-                animes: t.animes ? { ...t.animes, cover_image_url: editForm.cover_image_url || null } : null,
+                animes: t.animes ? { ...t.animes, cover_image_url: editForm.cover_image_url || null, genres: editForm.genres, synopsis: editForm.synopsis || null } : null,
               }
             : t
         ),
@@ -493,6 +540,17 @@ export default function DashboardClient({
                     {/* Inline edit form */}
                     {isEditing && (
                       <div className="mt-3 pt-3 border-t space-y-3">
+                        {/* Synopsis */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium">תיאור</label>
+                          <textarea
+                            value={editForm.synopsis}
+                            onChange={(e) => setEditForm((p) => ({ ...p, synopsis: e.target.value }))}
+                            placeholder="תיאור קצר של האנימה..."
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px] resize-y"
+                          />
+                        </div>
+                        {/* Cover image */}
                         <div className="space-y-1">
                           <label className="text-xs font-medium">תמונת כיסוי (URL)</label>
                           <Input
@@ -503,6 +561,35 @@ export default function DashboardClient({
                             onChange={(e) => setEditForm((p) => ({ ...p, cover_image_url: e.target.value }))}
                           />
                         </div>
+                        {/* Genres */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium">ז&apos;אנרים</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {GENRES.map((genre) => {
+                              const selected = editForm.genres.includes(genre.value)
+                              return (
+                                <button
+                                  key={genre.value}
+                                  type="button"
+                                  onClick={() => setEditForm((p) => ({
+                                    ...p,
+                                    genres: selected
+                                      ? p.genres.filter((g) => g !== genre.value)
+                                      : [...p.genres, genre.value],
+                                  }))}
+                                  className={`px-2 py-0.5 rounded-full text-[11px] border transition-colors cursor-pointer ${
+                                    selected
+                                      ? 'border-primary bg-primary/15 text-primary'
+                                      : 'border-border text-muted-foreground hover:border-primary/50'
+                                  }`}
+                                >
+                                  {genre.label}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                        {/* Status + Platform */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <label className="text-xs font-medium">סטטוס</label>
@@ -531,6 +618,7 @@ export default function DashboardClient({
                             </Select>
                           </div>
                         </div>
+                        {/* Direct link */}
                         <div className="space-y-1">
                           <label className="text-xs font-medium">קישור ישיר</label>
                           <Input
@@ -540,6 +628,7 @@ export default function DashboardClient({
                             onChange={(e) => setEditForm((p) => ({ ...p, direct_link: e.target.value }))}
                           />
                         </div>
+                        {/* Episodes */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <label className="text-xs font-medium">פרקים מתורגמים</label>
@@ -561,6 +650,42 @@ export default function DashboardClient({
                             />
                           </div>
                         </div>
+                        {/* Episode range */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium">טווח פרקים</label>
+                          <Input
+                            dir="ltr"
+                            placeholder="לדוגמה: 1-12"
+                            value={editForm.episode_range}
+                            onChange={(e) => setEditForm((p) => ({ ...p, episode_range: e.target.value }))}
+                          />
+                        </div>
+                        {/* Quality + Credits */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium">איכות</label>
+                            <Select value={editForm.quality || '_none'} onValueChange={(v) => setEditForm((p) => ({ ...p, quality: v === '_none' ? '' : v }))}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="בחר איכות..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="_none">לא צוין</SelectItem>
+                                {QUALITY_OPTIONS.map((q) => (
+                                  <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium">קרדיטים</label>
+                            <Input
+                              placeholder="תרגום: פלוני, עריכה: אלמוני"
+                              value={editForm.credits}
+                              onChange={(e) => setEditForm((p) => ({ ...p, credits: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+                        {/* Notes */}
                         <div className="space-y-1">
                           <label className="text-xs font-medium">הערות</label>
                           <textarea
