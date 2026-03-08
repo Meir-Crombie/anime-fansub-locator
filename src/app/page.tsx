@@ -13,7 +13,7 @@ export default async function HomePage() {
   // Fetch counts and recent animes in parallel
   const [animesCountRes, fansubsCountRes, recentAnimesRes] = await Promise.all([
     supabase.from('animes').select('id', { count: 'exact', head: true }),
-    supabase.from('fansub_groups').select('id', { count: 'exact', head: true }),
+    supabase.from('fansub_groups').select('id', { count: 'exact', head: true }).eq('is_active', true),
     supabase
       .from('animes')
       .select('id, title_he, title_en, cover_image_url, genres, synopsis')
