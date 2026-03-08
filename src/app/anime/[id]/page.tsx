@@ -62,60 +62,59 @@ export default async function AnimePage({ params }: AnimePageProps) {
 
   return (
     <main className="container mx-auto max-w-5xl px-4 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] gap-8">
-        {/* Cover Image */}
-        <div className="relative aspect-[3/4] w-full max-w-[250px] mx-auto md:mx-0 overflow-hidden rounded-xl border bg-muted">
-          {anime.cover_image_url ? (
-            <Image
-              src={anime.cover_image_url}
-              alt={anime.title_he}
-              fill
-              sizes="250px"
-              className="object-cover"
-              priority
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-muted-foreground text-sm">
-              אין תמונה
-            </div>
-          )}
-        </div>
-
-        {/* Details */}
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold">{anime.title_he}</h1>
-            <p className="text-lg text-muted-foreground anime-title mt-1">
-              {anime.title_en}
-            </p>
-            {anime.title_romaji && (
-              <p className="text-sm text-muted-foreground anime-title">
-                {anime.title_romaji}
-              </p>
-            )}
+      {/* Banner Cover Image */}
+      <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl border bg-muted">
+        {anime.cover_image_url ? (
+          <Image
+            src={anime.cover_image_url}
+            alt={anime.title_he}
+            fill
+            sizes="(max-width: 1024px) 100vw, 1024px"
+            className="object-cover"
+            priority
+            unoptimized
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground text-sm">
+            אין תמונה
           </div>
+        )}
+      </div>
 
-          {/* Genres */}
-          {anime.genres && anime.genres.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {anime.genres.map((genre: string) => (
-                <Badge key={genre} variant="secondary">
-                  {genre}
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          {/* Synopsis */}
-          {anime.synopsis && (
-            <div>
-              <h2 className="text-lg font-semibold mb-2">תקציר</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                {anime.synopsis}
-              </p>
-            </div>
+      {/* Details */}
+      <div className="space-y-4 mt-6">
+        <div>
+          <h1 className="text-3xl font-bold">{anime.title_he}</h1>
+          <p className="text-lg text-muted-foreground anime-title mt-1">
+            {anime.title_en}
+          </p>
+          {anime.title_romaji && (
+            <p className="text-sm text-muted-foreground anime-title">
+              {anime.title_romaji}
+            </p>
           )}
         </div>
+
+        {/* Genres */}
+        {anime.genres && anime.genres.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {anime.genres.map((genre: string) => (
+              <Badge key={genre} variant="secondary">
+                {genre}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Synopsis */}
+        {anime.synopsis && (
+          <div>
+            <h2 className="text-lg font-semibold mb-2">תקציר</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              {anime.synopsis}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Big Watch Button */}
