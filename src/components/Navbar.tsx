@@ -36,6 +36,7 @@ const ADMIN_NAV_LINKS: { href: string; label: string; icon: typeof Shield }[] = 
   { href: '/admin/animes', label: 'אנימות', icon: Film },
   { href: '/admin/fansubs', label: 'קבוצות', icon: Users },
   { href: '/admin/applications', label: 'בקשות', icon: ClipboardList },
+  { href: '/admin/submissions', label: 'דיווחי תרגום', icon: FileText },
   { href: '/admin/analytics', label: 'אנליטיקה', icon: BarChart3 },
   { href: '/admin/form-builder', label: 'טופס בקשה', icon: Settings },
 ]

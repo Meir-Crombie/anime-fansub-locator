@@ -32,3 +32,63 @@ export async function createUserSubmission(formData: Record<string, unknown>) {
 
   return { error: null }
 }
+
+export async function approveSubmission(submissionId: string) {
+  const { z } = await import('zod')
+  const parsed = z.string().uuid().safeParse(submissionId)
+  if (!parsed.success) return { error: 'מזהה לא תקין' }
+
+  const supabase = createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
+    throw new Error('Forbidden')
+  }
+
+  const { error } = await supabase
+    .from('user_submissions')
+    .update({ is_verified: true })
+    .eq('id', parsed.data)
+
+  if (error) return { error: error.message }
+
+  const { revalidatePath } = await import('next/cache')
+  revalidatePath('/admin/submissions')
+  return { error: null }
+}
+
+export async function deleteSubmission(submissionId: string) {
+  const { z } = await import('zod')
+  const parsed = z.string().uuid().safeParse(submissionId)
+  if (!parsed.success) return { error: 'מזהה לא תקין' }
+
+  const supabase = createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
+    throw new Error('Forbidden')
+  }
+
+  const { error } = await supabase
+    .from('user_submissions')
+    .delete()
+    .eq('id', parsed.data)
+
+  if (error) return { error: error.message }
+
+  const { revalidatePath } = await import('next/cache')
+  revalidatePath('/admin/submissions')
+  return { error: null }
+}
