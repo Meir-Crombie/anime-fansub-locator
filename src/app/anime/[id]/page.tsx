@@ -43,6 +43,23 @@ export default async function AnimePage({ params }: AnimePageProps) {
 
   if (error || !anime) notFound()
 
+  // Fetch verified community submissions for this anime (by name match)
+  const { data: communitySubmissions } = await supabase
+    .from('user_submissions')
+    .select('*')
+    .eq('is_verified', true)
+    .ilike('anime_name', anime.title_he)
+
+  // Filter out submissions that already have a matching fansub translation
+  const existingFansubNames = new Set(
+    (anime.translations ?? []).map((t: { fansub_groups?: { name?: string } }) =>
+      t.fansub_groups?.name?.toLowerCase()
+    ).filter(Boolean)
+  )
+  const uniqueSubmissions = (communitySubmissions ?? []).filter(
+    (s) => !existingFansubNames.has(s.translator_name.toLowerCase())
+  )
+
   return (
     <main className="container mx-auto max-w-5xl px-4 py-8">
       <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] gap-8">
@@ -102,10 +119,10 @@ export default async function AnimePage({ params }: AnimePageProps) {
       </div>
 
       {/* Big Watch Button */}
-      {anime.translations && anime.translations.length > 0 && (
+      {(anime.translations?.length > 0 || uniqueSubmissions.length > 0) && (
         <div className="mt-10 flex justify-center">
           <a
-            href={anime.translations[0].direct_link}
+            href={anime.translations?.[0]?.direct_link ?? uniqueSubmissions[0]?.translation_url}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 text-white text-xl font-bold py-6 px-8 rounded-xl w-full max-w-sm transition-all duration-200 hover:-translate-y-0.5"
@@ -131,7 +148,7 @@ export default async function AnimePage({ params }: AnimePageProps) {
             ✏️ הגש תרגום
           </Link>
         </div>
-        <TranslationList translations={anime.translations ?? []} />
+        <TranslationList translations={anime.translations ?? []} communitySubmissions={uniqueSubmissions} />
       </section>
     </main>
   )

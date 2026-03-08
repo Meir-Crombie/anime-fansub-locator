@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { approveSubmission, deleteSubmission } from '@/actions/submissions'
+import { approveSubmission, deleteSubmission, reprocessSubmission } from '@/actions/submissions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Check, Trash2, ExternalLink } from 'lucide-react'
+import { Loader2, Check, Trash2, ExternalLink, RefreshCw } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import type { UserSubmission } from '@/lib/types'
 
@@ -57,6 +57,15 @@ export default function SubmissionReviewList({ submissions }: SubmissionReviewLi
     setProcessingId(null)
   }
 
+  async function handleReprocess(id: string) {
+    setProcessingId(id)
+    const result = await reprocessSubmission(id)
+    if (!result.error) {
+      setProcessedIds((prev) => new Set(prev).add(id))
+    }
+    setProcessingId(null)
+  }
+
   const visible = submissions.filter((s) => !processedIds.has(s.id))
   const pending = visible.filter((s) => !s.is_verified)
   const verified = visible.filter((s) => s.is_verified)
@@ -94,6 +103,7 @@ export default function SubmissionReviewList({ submissions }: SubmissionReviewLi
                 submission={sub}
                 processingId={processingId}
                 onDelete={handleDelete}
+                onReprocess={handleReprocess}
                 verified
               />
             ))}
@@ -112,12 +122,14 @@ function SubmissionCard({
   processingId,
   onApprove,
   onDelete,
+  onReprocess,
   verified,
 }: {
   submission: UserSubmission
   processingId: string | null
   onApprove?: (id: string) => void
   onDelete: (id: string) => void
+  onReprocess?: (id: string) => void
   verified?: boolean
 }) {
   const isProcessing = processingId === submission.id
@@ -199,6 +211,21 @@ function SubmissionCard({
                 <Check className="h-4 w-4 me-1" />
               )}
               אישור
+            </Button>
+          )}
+          {verified && onReprocess && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onReprocess(submission.id)}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <Loader2 className="h-4 w-4 me-1 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 me-1" />
+              )}
+              עיבוד מחדש
             </Button>
           )}
           <Button

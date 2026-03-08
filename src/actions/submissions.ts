@@ -60,10 +60,15 @@ export async function approveSubmission(submissionId: string) {
 
   if (fetchErr || !submission) return { error: 'דיווח לא נמצא' }
 
+  // Extract extra fields that may not be in strict types
+  const sub = submission as Record<string, unknown>
+  const coverImageUrl = (sub.cover_image_url as string | null) || null
+  const genres = (sub.genres as string[] | null) ?? []
+
   // 1. Check if anime already exists by matching names
   const { data: existingAnime } = await supabase
     .from('animes')
-    .select('id')
+    .select('id, cover_image_url, genres')
     .or(`title_he.ilike.${submission.anime_name},title_en.ilike.${submission.anime_name_en ?? submission.anime_name}`)
     .limit(1)
     .maybeSingle()
@@ -72,13 +77,26 @@ export async function approveSubmission(submissionId: string) {
 
   if (existingAnime) {
     animeId = existingAnime.id
+    // Update cover image and genres if they're currently empty
+    const updates: Record<string, unknown> = {}
+    if (!existingAnime.cover_image_url && coverImageUrl) {
+      updates.cover_image_url = coverImageUrl
+    }
+    if ((!existingAnime.genres || existingAnime.genres.length === 0) && genres.length > 0) {
+      updates.genres = genres
+    }
+    if (Object.keys(updates).length > 0) {
+      await supabase.from('animes').update(updates).eq('id', animeId)
+    }
   } else {
-    // Create new anime entry
+    // Create new anime entry with all available data
     const { data: newAnime, error: animeErr } = await supabase
       .from('animes')
       .insert({
         title_he: submission.anime_name,
         title_en: submission.anime_name_en ?? submission.anime_name,
+        cover_image_url: coverImageUrl,
+        genres,
       })
       .select('id')
       .single()
@@ -87,7 +105,7 @@ export async function approveSubmission(submissionId: string) {
     animeId = newAnime.id
   }
 
-  // 2. Try to find fansub group by name
+  // 2. Try to find fansub group by name — only link if exists, don't create new ones
   const fansubName = (submission as Record<string, unknown>).fansub_name_custom as string | null || submission.translator_name
   const { data: existingFansub } = await supabase
     .from('fansub_groups')
@@ -96,46 +114,28 @@ export async function approveSubmission(submissionId: string) {
     .limit(1)
     .maybeSingle()
 
-  let fansubId: string
-
+  // 3. If fansub found, create a proper translation entry
   if (existingFansub) {
-    fansubId = existingFansub.id
-  } else {
-    // Create a new fansub group for this translator/group
-    const { data: newFansub, error: fansubErr } = await supabase
-      .from('fansub_groups')
-      .insert({
-        name: fansubName,
-        description: null,
-        is_active: true,
-        status: 'approved' as const,
-      })
-      .select('id')
-      .single()
+    // Map status: 'unknown' → 'ongoing'
+    const statusMap: Record<string, string> = { ongoing: 'ongoing', completed: 'completed', unknown: 'ongoing', dropped: 'dropped' }
+    const dbStatus = (statusMap[submission.status] ?? 'ongoing') as 'ongoing' | 'completed' | 'dropped'
 
-    if (fansubErr || !newFansub) return { error: 'שגיאה ביצירת קבוצת פאנסאב: ' + (fansubErr?.message ?? '') }
-    fansubId = newFansub.id
+    // Map platform: 'other' → 'website'
+    const platformMap: Record<string, string> = { website: 'website', telegram: 'telegram', discord: 'discord', youtube: 'youtube', other: 'website' }
+    const dbPlatform = (platformMap[submission.platform_type] ?? 'website') as 'website' | 'telegram' | 'discord' | 'youtube'
+
+    await supabase
+      .from('translations')
+      .upsert({
+        anime_id: animeId,
+        fansub_id: existingFansub.id,
+        status: dbStatus,
+        platform: dbPlatform,
+        direct_link: submission.translation_url,
+        notes: submission.description ?? null,
+      }, { onConflict: 'anime_id,fansub_id,platform' })
   }
-
-  // 3. Create translation entry
-  // Map status: 'unknown' → 'ongoing'
-  const statusMap: Record<string, string> = { ongoing: 'ongoing', completed: 'completed', unknown: 'ongoing', dropped: 'dropped' }
-  const dbStatus = (statusMap[submission.status] ?? 'ongoing') as 'ongoing' | 'completed' | 'dropped'
-
-  // Map platform: 'other' → 'website'
-  const platformMap: Record<string, string> = { website: 'website', telegram: 'telegram', discord: 'discord', youtube: 'youtube', other: 'website' }
-  const dbPlatform = (platformMap[submission.platform_type] ?? 'website') as 'website' | 'telegram' | 'discord' | 'youtube'
-
-  await supabase
-    .from('translations')
-    .upsert({
-      anime_id: animeId,
-      fansub_id: fansubId,
-      status: dbStatus,
-      platform: dbPlatform,
-      direct_link: submission.translation_url,
-      notes: submission.description ?? null,
-    }, { onConflict: 'anime_id,fansub_id,platform' })
+  // If no fansub found — the verified submission itself will appear on the anime page
 
   // 4. Mark submission as verified
   const { error } = await supabase
@@ -149,7 +149,6 @@ export async function approveSubmission(submissionId: string) {
   revalidatePath('/admin/submissions')
   revalidatePath('/')
   revalidatePath(`/anime/${animeId}`)
-  revalidatePath(`/fansub/${fansubId}`)
   revalidatePath('/fansubs')
   return { error: null }
 }
@@ -182,4 +181,32 @@ export async function deleteSubmission(submissionId: string) {
   const { revalidatePath } = await import('next/cache')
   revalidatePath('/admin/submissions')
   return { error: null }
+}
+
+export async function reprocessSubmission(submissionId: string) {
+  const { z } = await import('zod')
+  const parsed = z.string().uuid().safeParse(submissionId)
+  if (!parsed.success) return { error: 'מזהה לא תקין' }
+
+  const supabase = createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
+    throw new Error('Forbidden')
+  }
+
+  // Un-verify first
+  await supabase
+    .from('user_submissions')
+    .update({ is_verified: false })
+    .eq('id', parsed.data)
+
+  // Re-approve with the fixed logic
+  return approveSubmission(parsed.data)
 }
