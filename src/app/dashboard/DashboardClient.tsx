@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { updateFansubGroup, deleteFansubGroup } from '@/actions/fansubs'
-import { deleteTranslation, updateTranslation } from '@/actions/translations'
+import { deleteTranslation, updateTranslation, updateEpisodeProgress } from '@/actions/translations'
 import { createAnnouncement, toggleAnnouncementPublished, deleteAnnouncement } from '@/actions/announcements'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -108,7 +108,7 @@ export default function DashboardClient({
 
   // Inline translation edit state
   const [editingTranslationId, setEditingTranslationId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState({ status: '', platform: '', direct_link: '', notes: '' })
+  const [editForm, setEditForm] = useState({ status: '', platform: '', direct_link: '', notes: '', translated_episodes: 0, total_episodes: '' })
   const [isSavingTranslation, setIsSavingTranslation] = useState(false)
 
   // Announcements form state
@@ -130,12 +130,15 @@ export default function DashboardClient({
   }
 
   function startEditTranslation(t: TranslationRow) {
+    const progress = t.episode_progress?.[0]
     setEditingTranslationId(t.id)
     setEditForm({
       status: t.status,
       platform: t.platform,
       direct_link: t.direct_link,
       notes: t.notes ?? '',
+      translated_episodes: progress?.translated_episodes ?? 0,
+      total_episodes: progress?.total_episodes?.toString() ?? '',
     })
   }
 
@@ -149,6 +152,13 @@ export default function DashboardClient({
       direct_link: editForm.direct_link,
       notes: editForm.notes || null,
     })
+    // Also update episode progress
+    const totalEp = editForm.total_episodes ? parseInt(editForm.total_episodes, 10) : null
+    await updateEpisodeProgress({
+      translation_id: editingTranslationId,
+      translated_episodes: editForm.translated_episodes,
+      total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
+    })
     if (!result.error) {
       setTranslationsMap((prev) => ({
         ...prev,
@@ -160,6 +170,10 @@ export default function DashboardClient({
                 platform: editForm.platform as TranslationRow['platform'],
                 direct_link: editForm.direct_link,
                 notes: editForm.notes || null,
+                episode_progress: [{
+                  translated_episodes: editForm.translated_episodes,
+                  total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
+                }],
               }
             : t
         ),
@@ -504,6 +518,27 @@ export default function DashboardClient({
                             value={editForm.direct_link}
                             onChange={(e) => setEditForm((p) => ({ ...p, direct_link: e.target.value }))}
                           />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium">פרקים מתורגמים</label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={editForm.translated_episodes}
+                              onChange={(e) => setEditForm((p) => ({ ...p, translated_episodes: parseInt(e.target.value, 10) || 0 }))}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium">סה&quot;כ פרקים</label>
+                            <Input
+                              type="number"
+                              min={0}
+                              placeholder="לא ידוע"
+                              value={editForm.total_episodes}
+                              onChange={(e) => setEditForm((p) => ({ ...p, total_episodes: e.target.value }))}
+                            />
+                          </div>
                         </div>
                         <div className="space-y-1">
                           <label className="text-xs font-medium">הערות</label>
