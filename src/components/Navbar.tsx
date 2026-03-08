@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import {
   Sun, Moon, Menu, LogOut, LayoutDashboard, Shield,
-  BarChart3, FileText, Settings, Film, Users, ClipboardList,
+  BarChart3, FileText, Settings, Film, Users, ClipboardList, PenLine,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -136,6 +136,22 @@ export default function Navbar({ initialLoggedIn, initialEmail, initialRole }: N
               {link.label}
             </Link>
           ))}
+
+          {/* Submit translation link for regular logged-in users */}
+          {loggedIn && !isAdmin && !isManager && (
+            <Link
+              href={'/submit' as never}
+              className={cn(
+                'text-sm transition-colors flex items-center gap-1.5',
+                pathname === '/submit'
+                  ? 'text-foreground font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <PenLine className="h-3.5 w-3.5" aria-hidden />
+              הגש תרגום
+            </Link>
+          )}
 
           {/* Management dropdown for admin/manager - visible in desktop nav */}
           {loggedIn && (isAdmin || isManager) && (
@@ -272,6 +288,22 @@ export default function Navbar({ initialLoggedIn, initialEmail, initialRole }: N
                     {link.label}
                   </Link>
                 ))}
+
+                {/* Submit translation link for regular logged-in users (mobile) */}
+                {loggedIn && !isAdmin && !isManager && (
+                  <Link
+                    href={'/submit' as never}
+                    className={cn(
+                      'text-base py-2 px-3 rounded-md transition-colors flex items-center gap-2',
+                      pathname === '/submit'
+                        ? 'bg-accent text-accent-foreground font-medium'
+                        : 'hover:bg-accent/50'
+                    )}
+                  >
+                    <PenLine className="h-4 w-4" />
+                    הגש תרגום
+                  </Link>
+                )}
 
                 {/* Manager/Admin mobile section */}
                 {loggedIn && (isAdmin || isManager) && (
