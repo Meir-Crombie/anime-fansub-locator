@@ -16,7 +16,7 @@ export default async function HomePage() {
     supabase.from('fansub_groups').select('id', { count: 'exact', head: true }),
     supabase
       .from('animes')
-      .select('id, title_he, title_en, cover_image_url, genres')
+      .select('id, title_he, title_en, cover_image_url, genres, synopsis')
       .order('created_at', { ascending: false })
       .limit(8),
   ])

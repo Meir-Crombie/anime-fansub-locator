@@ -11,6 +11,7 @@ interface SearchResult {
   title_en: string
   cover_image_url: string | null
   genres: string[]
+  synopsis: string | null
   similarity_score: number
   title_romaji: string | null
 }
@@ -43,7 +44,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   const { data, error } = await supabase
     .from('animes')
-    .select('id, title_he, title_en, title_romaji, cover_image_url, genres')
+    .select('id, title_he, title_en, title_romaji, cover_image_url, genres, synopsis')
     .or(`title_he.ilike.${pattern},title_en.ilike.${pattern},title_romaji.ilike.${pattern}`)
     .limit(20)
 
@@ -63,6 +64,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     title_romaji: a.title_romaji,
     cover_image_url: a.cover_image_url,
     genres: a.genres ?? [],
+    synopsis: a.synopsis ?? null,
     similarity_score: 1,
   }))
 

@@ -23,7 +23,7 @@ export default async function AnimesPage({ searchParams }: AnimesPageProps) {
 
   let dbQuery = supabase
     .from('animes')
-    .select('id, title_he, title_en, cover_image_url, genres')
+    .select('id, title_he, title_en, cover_image_url, genres, synopsis')
     .order('created_at', { ascending: false })
 
   // Apply search filter
@@ -70,6 +70,7 @@ export default async function AnimesPage({ searchParams }: AnimesPageProps) {
     title_en: string
     cover_image_url: string | null
     genres: string[] | null
+    synopsis: string | null
   }
 
   const animes: AnimeCardData[] = ((data ?? []) as AnimeRow[]).map((a) => ({
@@ -78,6 +79,7 @@ export default async function AnimesPage({ searchParams }: AnimesPageProps) {
     title_en: a.title_en,
     cover_image_url: a.cover_image_url,
     genres: a.genres ?? [],
+    synopsis: a.synopsis,
   }))
 
   return (

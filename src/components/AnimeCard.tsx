@@ -8,6 +8,7 @@ export interface AnimeCardData {
   title_en: string
   cover_image_url: string | null
   genres: string[]
+  synopsis?: string | null
 }
 
 interface AnimeCardProps {
@@ -48,6 +49,13 @@ export default function AnimeCard({ anime }: AnimeCardProps) {
         <p className="text-xs text-muted-foreground line-clamp-1 anime-title">
           {anime.title_en}
         </p>
+
+        {/* Synopsis */}
+        {anime.synopsis && (
+          <p className="text-xs text-muted-foreground line-clamp-2">
+            {anime.synopsis}
+          </p>
+        )}
 
         {/* Genre badges */}
         {displayGenres.length > 0 && (
