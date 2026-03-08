@@ -157,6 +157,14 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
   // Verify that the user can write to this fansub
   await verifyManager(supabase, fansubId, user.id)
 
+  // Get user role
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  const isAdmin = ['admin', 'super_admin'].includes(profile?.role ?? '')
+
   // Find existing anime by Hebrew name
   const { data: existing } = await supabase
     .from('animes')
@@ -168,15 +176,15 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
 
   if (existing) {
     animeId = existing.id
-    // Update cover_image_url if provided and anime exists
-    if (parsed.data.cover_image_url) {
+    // Only admin/super_admin can update anime fields
+    if (isAdmin && parsed.data.cover_image_url) {
       await supabase
         .from('animes')
         .update({ cover_image_url: parsed.data.cover_image_url })
         .eq('id', animeId)
     }
-  } else {
-    // Create new anime entry
+  } else if (isAdmin) {
+    // Only admin/super_admin can create new anime entries
     const insertData: { title_he: string; title_en: string; cover_image_url?: string; genres?: string[] } = {
       title_he: parsed.data.anime_name.trim(),
       title_en: parsed.data.anime_name_en?.trim() ?? '',
@@ -194,6 +202,9 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
       .single()
     if (animeError || !newAnime) throw new Error(animeError?.message ?? 'Failed to create anime')
     animeId = newAnime.id
+  } else {
+    // Regular manager — anime must already exist in the DB
+    return { error: { formErrors: ['האנימה לא נמצאה במאגר. פנה למנהל ראשי כדי להוסיף אותה.'], fieldErrors: {} } }
   }
 
   // Build notes from optional fields

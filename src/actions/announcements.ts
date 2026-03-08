@@ -30,7 +30,7 @@ async function verifyFansubManager(fansubId: string) {
     .eq('id', user.id)
     .single()
 
-  if (group?.manager_uid !== user.id && profile?.role !== 'admin') {
+  if (group?.manager_uid !== user.id && !['admin', 'super_admin'].includes(profile?.role ?? '')) {
     throw new Error('Forbidden')
   }
 
