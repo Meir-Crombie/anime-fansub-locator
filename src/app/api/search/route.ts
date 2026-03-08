@@ -29,53 +29,30 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServerClient()
   const searchQuery = parsed.data.query.toLowerCase().trim()
+  const pattern = `%${searchQuery}%`
 
-  // Try RPC first (uses pg_trgm fuzzy search), fall back to ILIKE if RPC unavailable
-  let results: {
-    id: string
-    title_he: string
-    title_en: string
-    title_romaji: string | null
-    cover_image_url: string | null
-    genres: string[]
-    similarity_score: number
-  }[] = []
+  const { data, error } = await supabase
+    .from('animes')
+    .select('id, title_he, title_en, title_romaji, cover_image_url, genres')
+    .or(`title_he.ilike.${pattern},title_en.ilike.${pattern},title_romaji.ilike.${pattern}`)
+    .limit(20)
 
-  const { data: rpcData, error: rpcError } = await supabase.rpc('search_animes', {
-    search_query: searchQuery,
-  })
-
-  if (!rpcError && rpcData) {
-    results = rpcData
-  } else {
-    // Fallback: simple ILIKE substring search
-    console.warn('[search] RPC fallback — search_animes unavailable:', rpcError?.message)
-
-    const pattern = `%${searchQuery}%`
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from('animes')
-      .select('id, title_he, title_en, title_romaji, cover_image_url, genres')
-      .or(`title_he.ilike.${pattern},title_en.ilike.${pattern},title_romaji.ilike.${pattern}`)
-      .limit(20)
-
-    if (fallbackError) {
-      console.error('[search] Fallback query error:', fallbackError)
-      return NextResponse.json(
-        { data: null, error: 'החיפוש נכשל' },
-        { status: 500 }
-      )
-    }
-
-    results = (fallbackData ?? []).map((a) => ({
-      id: a.id,
-      title_he: a.title_he,
-      title_en: a.title_en,
-      title_romaji: a.title_romaji,
-      cover_image_url: a.cover_image_url,
-      genres: a.genres ?? [],
-      similarity_score: 1,
-    }))
+  if (error) {
+    console.error('[search] Query error:', error)
+    return NextResponse.json(
+      { data: null, error: 'החיפוש נכשל' },
+      { status: 500 }
+    )
   }
+
+  const results = (data ?? []).map((a) => ({
+    id: a.id,
+    title_he: a.title_he,
+    title_en: a.title_en,
+    title_romaji: a.title_romaji,
+    cover_image_url: a.cover_image_url,
+    genres: a.genres ?? [],
+  }))
 
   // Log unsatisfied searches to analytics
   if (results.length === 0) {

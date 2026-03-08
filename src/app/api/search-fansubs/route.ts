@@ -26,56 +26,33 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServerClient()
-  const searchQuery = parsed.data.query.trim()
-  const normalized = searchQuery.toLowerCase()
+  const pattern = `%${parsed.data.query.toLowerCase().trim()}%`
 
-  // Try RPC first (uses pg_trgm fuzzy search), fall back to ILIKE if unavailable
-  let results: {
-    id: string
-    name: string
-    logo_url: string | null
-    description: string | null
-    translation_count: number
-    similarity_score: number
-  }[] = []
+  const { data, error } = await supabase
+    .from('fansub_groups')
+    .select('id, name, logo_url, description, translations(count)')
+    .eq('is_active', true)
+    .ilike('name', pattern)
+    .limit(10)
 
-  const { data: rpcData, error: rpcError } = await supabase.rpc('search_fansubs', {
-    search_query: normalized,
-  })
-
-  if (!rpcError && rpcData) {
-    results = rpcData
-  } else {
-    // Fallback: ILIKE substring search
-    console.warn('[search-fansubs] RPC fallback — search_fansubs unavailable:', rpcError?.message)
-
-    const pattern = `%${normalized}%`
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from('fansub_groups')
-      .select('id, name, logo_url, description, translations(count)')
-      .or(`name.ilike.${pattern},description.ilike.${pattern}`)
-      .limit(10)
-
-    if (fallbackError) {
-      console.error('[search-fansubs] Fallback query error:', fallbackError)
-      return NextResponse.json(
-        { data: null, error: 'שגיאת שרת' },
-        { status: 500 }
-      )
-    }
-
-    results = (fallbackData ?? []).map((fg) => {
-      const countArr = fg.translations as unknown as { count: number }[]
-      return {
-        id: fg.id,
-        name: fg.name,
-        logo_url: fg.logo_url,
-        description: fg.description,
-        translation_count: countArr?.[0]?.count ?? 0,
-        similarity_score: 1,
-      }
-    })
+  if (error) {
+    console.error('[search-fansubs] Query error:', error)
+    return NextResponse.json(
+      { data: null, error: 'שגיאת שרת' },
+      { status: 500 }
+    )
   }
+
+  const results = (data ?? []).map((fg) => {
+    const countArr = fg.translations as unknown as { count: number }[]
+    return {
+      id: fg.id,
+      name: fg.name,
+      logo_url: fg.logo_url,
+      description: fg.description,
+      translation_count: countArr?.[0]?.count ?? 0,
+    }
+  })
 
   return NextResponse.json({ data: results, error: null }, {
     headers: { 'Cache-Control': 'no-store' },

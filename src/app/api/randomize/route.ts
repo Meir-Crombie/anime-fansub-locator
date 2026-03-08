@@ -23,8 +23,10 @@ export async function POST(req: NextRequest) {
 
   const { genres, min_ep, max_ep, min_season, max_season } = parsed.data
 
-  const supabase = await createServerClient()
-  const { data, error } = await supabase.rpc('get_random_anime_filtered', {
+  const supabase = createServerClient()
+
+  // Try RPC first
+  const { data: rpcData, error: rpcError } = await supabase.rpc('get_random_anime_filtered', {
     p_genres:     genres?.length ? genres : null,
     p_min_ep:     min_ep     ?? null,
     p_max_ep:     max_ep     ?? null,
@@ -32,18 +34,35 @@ export async function POST(req: NextRequest) {
     p_max_season: max_season ?? null,
   })
 
-  if (error) {
-    console.error('[/api/randomize]', error.message)
-    return NextResponse.json({ data: null, error: 'Server error' }, { status: 500 })
+  if (!rpcError) {
+    const result = Array.isArray(rpcData) ? rpcData[0] : rpcData
+    if (!result) return NextResponse.json({ data: null, error: 'no_results' }, { status: 404 })
+    return NextResponse.json({ data: result, error: null }, { headers: { 'Cache-Control': 'no-store' } })
   }
 
-  const result = Array.isArray(data) ? data[0] : data
+  // Fallback: count + random offset
+  console.warn('[/api/randomize] RPC fallback:', rpcError.message)
 
-  if (!result) {
+  const { count } = await supabase
+    .from('animes')
+    .select('*', { count: 'exact', head: true })
+
+  if (!count || count === 0) {
     return NextResponse.json({ data: null, error: 'no_results' }, { status: 404 })
   }
 
-  return NextResponse.json({ data: result, error: null }, {
+  const randomOffset = Math.floor(Math.random() * count)
+  const { data: fallbackData, error: fallbackError } = await supabase
+    .from('animes')
+    .select('id, title_he, title_en')
+    .range(randomOffset, randomOffset)
+
+  if (fallbackError || !fallbackData?.[0]) {
+    console.error('[/api/randomize] Fallback error:', fallbackError?.message)
+    return NextResponse.json({ data: null, error: 'Server error' }, { status: 500 })
+  }
+
+  return NextResponse.json({ data: fallbackData[0], error: null }, {
     headers: { 'Cache-Control': 'no-store' },
   })
 }
