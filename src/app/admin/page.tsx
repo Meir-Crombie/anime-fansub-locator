@@ -70,7 +70,7 @@ export default async function AdminOverviewPage() {
     { label: 'משתמשים רשומים', value: userCount ?? 0, icon: Users, href: '/admin/users' as Route },
     { label: 'אנימות', value: animeCount ?? 0, icon: Film, href: '/admin/animes' as Route },
     { label: 'קבוצות', value: fansubCount ?? 0, icon: Users, href: '/admin/fansubs' as Route },
-    { label: 'תרגומים', value: translationCount ?? 0, icon: Languages, href: '#' as Route },
+    { label: 'תרגומים', value: translationCount ?? 0, icon: Languages, href: '/admin/animes' as Route },
     { label: 'בקשות ממתינות', value: pendingAppCount ?? 0, icon: FileText, href: '/admin/applications' as Route },
     { label: 'חיפושים ללא תשובה', value: unresolvedSearchCount ?? 0, icon: Search, href: '/admin/analytics' as Route },
   ]

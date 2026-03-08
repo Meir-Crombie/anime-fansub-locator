@@ -43,9 +43,6 @@ export default async function AnimePage({ params }: AnimePageProps) {
 
   if (error || !anime) notFound()
 
-  // Check auth for showing submit button
-  const { data: { user } } = await supabase.auth.getUser()
-
   return (
     <main className="container mx-auto max-w-5xl px-4 py-8">
       <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] gap-8">
@@ -108,18 +105,16 @@ export default async function AnimePage({ params }: AnimePageProps) {
       <section className="mt-12 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">תרגומים זמינים</h2>
-          {user && (
-            <Link
-              href="/submit"
-              className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5"
-              style={{
-                background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-                boxShadow: '0 4px 14px rgba(6,182,212,0.3)',
-              }}
-            >
-              ✏️ הגש תרגום
-            </Link>
-          )}
+          <Link
+            href="/submit"
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5"
+            style={{
+              background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+              boxShadow: '0 4px 14px rgba(6,182,212,0.3)',
+            }}
+          >
+            ✏️ הגש תרגום
+          </Link>
         </div>
         <TranslationList translations={anime.translations ?? []} />
       </section>

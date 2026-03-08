@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Search, Loader2, Users, ArrowLeft } from 'lucide-react'
-import { SEARCH_DEBOUNCE_MS } from '@/lib/constants'
 
-const SMART_SEARCH_MIN = 1
+const MIN_CHARS = 2
+const DEBOUNCE_MS = 300
 
 type SearchMode = 'anime' | 'fansub'
 
@@ -17,7 +17,7 @@ interface AnimeResult {
   title_en: string
   cover_image_url: string | null
   genres: string[]
-  similarity: number
+  similarity_score: number
 }
 
 interface FansubResult {
@@ -25,177 +25,165 @@ interface FansubResult {
   name: string
   logo_url: string | null
   description: string | null
-  similarity: number
+  translation_count: number
+  similarity_score: number
 }
+
+type SearchResult = AnimeResult | FansubResult
 
 export default function SearchBar() {
   const router = useRouter()
   const [mode, setMode] = useState<SearchMode>('anime')
   const [query, setQuery] = useState('')
-  const [animeResults, setAnimeResults] = useState<AnimeResult[]>([])
-  const [fansubResults, setFansubResults] = useState<FansubResult[]>([])
+  const [results, setResults] = useState<SearchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [crossModeHint, setCrossModeHint] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const abortRef = useRef<AbortController | null>(null)
 
-  // Close dropdown on outside click
+  // Close on outside click
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    function onClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false)
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
-  const [crossModeCount, setCrossModeCount] = useState<number | null>(null)
-
-  const performSearch = useCallback(async (searchQuery: string) => {
-    if (searchQuery.length < SMART_SEARCH_MIN) {
-      setAnimeResults([])
-      setFansubResults([])
-      setIsOpen(false)
-      setCrossModeCount(null)
-      return
-    }
+  const doSearch = useCallback(async (q: string, searchMode: SearchMode) => {
+    // Abort previous in-flight request
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
 
     setIsLoading(true)
-    setError(null)
-    setCrossModeCount(null)
+    setCrossModeHint(null)
 
     try {
-      const endpoint = mode === 'anime' ? '/api/search' : '/api/search-fansubs'
+      const endpoint = searchMode === 'anime' ? '/api/search' : '/api/search-fansubs'
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchQuery }),
+        body: JSON.stringify({ query: q }),
+        signal: controller.signal,
       })
-
       const json = await res.json()
 
+      if (controller.signal.aborted) return
+
       if (!res.ok || json.error) {
-        setError(json.error ?? 'שגיאה בחיפוש')
-        setAnimeResults([])
-        setFansubResults([])
-      } else if (mode === 'anime') {
-        setAnimeResults(json.data ?? [])
-        setFansubResults([])
+        setResults([])
         setIsOpen(true)
+        return
+      }
 
-        // Cross-mode: check fansubs too if no anime results
-        if ((!json.data || json.data.length === 0) && searchQuery.length >= 2) {
-          const crossRes = await fetch('/api/search-fansubs', {
+      const data: SearchResult[] = json.data ?? []
+      setResults(data)
+      setIsOpen(true)
+
+      // Cross-mode check when no results
+      if (data.length === 0 && q.length >= MIN_CHARS) {
+        const otherEndpoint = searchMode === 'anime' ? '/api/search-fansubs' : '/api/search'
+        try {
+          const crossRes = await fetch(otherEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: searchQuery }),
+            body: JSON.stringify({ query: q }),
+            signal: controller.signal,
           })
           const crossJson = await crossRes.json()
-          if (crossRes.ok && crossJson.data?.length > 0) {
-            setCrossModeCount(crossJson.data.length)
+          if (!controller.signal.aborted && crossRes.ok && crossJson.data?.length > 0) {
+            const n = crossJson.data.length
+            setCrossModeHint(
+              searchMode === 'anime'
+                ? `נמצאו ${n} תוצאות בקבוצות פאנסאב — לחץ לעבור`
+                : `נמצאו ${n} תוצאות באנימה — לחץ לעבור`
+            )
           }
-        }
-      } else {
-        setFansubResults(json.data ?? [])
-        setAnimeResults([])
-        setIsOpen(true)
-
-        // Cross-mode: check anime too if no fansub results
-        if ((!json.data || json.data.length === 0) && searchQuery.length >= 2) {
-          const crossRes = await fetch('/api/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: searchQuery }),
-          })
-          const crossJson = await crossRes.json()
-          if (crossRes.ok && crossJson.data?.length > 0) {
-            setCrossModeCount(crossJson.data.length)
-          }
+        } catch {
+          // Cross-mode check is best-effort
         }
       }
-    } catch {
-      setError('שגיאת רשת. נסה שוב.')
-      setAnimeResults([])
-      setFansubResults([])
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      setResults([])
+      setIsOpen(true)
     } finally {
-      setIsLoading(false)
+      if (!controller.signal.aborted) setIsLoading(false)
     }
-  }, [mode])
+  }, [])
 
-  function handleChange(value: string) {
+  function handleInput(value: string) {
     setQuery(value)
     setSelectedIndex(-1)
-
     if (timerRef.current) clearTimeout(timerRef.current)
 
-    if (value.trim().length === 0) {
-      setAnimeResults([])
-      setFansubResults([])
+    const trimmed = value.trim()
+    if (trimmed.length < MIN_CHARS) {
+      setResults([])
       setIsOpen(false)
-      setError(null)
-      setCrossModeCount(null)
+      setCrossModeHint(null)
+      abortRef.current?.abort()
+      setIsLoading(false)
       return
     }
 
-    timerRef.current = setTimeout(() => {
-      performSearch(value.trim())
-    }, SEARCH_DEBOUNCE_MS)
+    timerRef.current = setTimeout(() => doSearch(trimmed, mode), DEBOUNCE_MS)
   }
 
-  const results = mode === 'anime' ? animeResults : fansubResults
+  function switchMode(newMode: SearchMode) {
+    if (newMode === mode) return
+    setMode(newMode)
+    setResults([])
+    setIsOpen(false)
+    setSelectedIndex(-1)
+    setCrossModeHint(null)
+    const trimmed = query.trim()
+    if (trimmed.length >= MIN_CHARS) {
+      doSearch(trimmed, newMode)
+    }
+  }
 
-  function selectResult(id: string) {
+  function navigate(id: string) {
     setIsOpen(false)
     setQuery('')
     router.push(mode === 'anime' ? `/anime/${id}` : `/fansub/${id}`)
   }
 
-  function handleModeChange(newMode: SearchMode) {
-    setMode(newMode)
-    setAnimeResults([])
-    setFansubResults([])
+  function goToFullPage() {
     setIsOpen(false)
-    setSelectedIndex(-1)
-    setCrossModeCount(null)
-    if (query.trim().length >= SMART_SEARCH_MIN) {
-      // Re-search with the new mode after state update
-      setTimeout(() => performSearch(query.trim()), 0)
+    if (mode === 'anime') {
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+    } else {
+      router.push('/fansubs')
     }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (!isOpen || results.length === 0) {
-      if (e.key === 'Enter' && query.trim().length >= SMART_SEARCH_MIN) {
-        if (mode === 'anime') {
-          router.push(`/search?q=${encodeURIComponent(query.trim())}`)
-        } else {
-          router.push('/fansubs')
-        }
+      if (e.key === 'Enter' && query.trim().length >= MIN_CHARS) {
+        goToFullPage()
       }
       return
     }
-
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
-        setSelectedIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0))
+        setSelectedIndex((i) => (i < results.length - 1 ? i + 1 : 0))
         break
       case 'ArrowUp':
         e.preventDefault()
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1))
+        setSelectedIndex((i) => (i > 0 ? i - 1 : results.length - 1))
         break
       case 'Enter':
         e.preventDefault()
-        if (selectedIndex >= 0 && selectedIndex < results.length) {
-          selectResult(results[selectedIndex].id)
-        } else if (mode === 'anime') {
-          router.push(`/search?q=${encodeURIComponent(query.trim())}`)
-        } else {
-          router.push('/fansubs')
-        }
+        if (selectedIndex >= 0) navigate(results[selectedIndex].id)
+        else goToFullPage()
         break
       case 'Escape':
         setIsOpen(false)
@@ -205,10 +193,11 @@ export default function SearchBar() {
 
   return (
     <div ref={containerRef} className="relative w-full max-w-2xl mx-auto">
-      {/* Mode tabs */}
+      {/* Mode toggle */}
       <div className="flex gap-1 mb-2 justify-center">
         <button
-          onClick={() => handleModeChange('anime')}
+          type="button"
+          onClick={() => switchMode('anime')}
           className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
             mode === 'anime'
               ? 'bg-primary text-primary-foreground'
@@ -219,7 +208,8 @@ export default function SearchBar() {
           אנימה
         </button>
         <button
-          onClick={() => handleModeChange('fansub')}
+          type="button"
+          onClick={() => switchMode('fansub')}
           className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
             mode === 'fansub'
               ? 'bg-primary text-primary-foreground'
@@ -231,6 +221,7 @@ export default function SearchBar() {
         </button>
       </div>
 
+      {/* Input */}
       <div className="relative flex items-center">
         <div className="absolute end-4 top-1/2 -translate-y-1/2 pointer-events-none">
           {isLoading ? (
@@ -243,7 +234,7 @@ export default function SearchBar() {
           type="search"
           dir="auto"
           value={query}
-          onChange={(e) => handleChange(e.target.value)}
+          onChange={(e) => handleInput(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setIsOpen(true)}
           placeholder={mode === 'anime' ? 'חפש אנימה בעברית, אנגלית או ביפנית...' : 'חפש קבוצת פאנסאב...'}
@@ -252,100 +243,109 @@ export default function SearchBar() {
         />
       </div>
 
-      {/* Validation message */}
-      {query.length > 0 && query.length < SMART_SEARCH_MIN && (
+      {/* Min chars hint */}
+      {query.length > 0 && query.trim().length < MIN_CHARS && (
         <p className="mt-1 text-xs text-muted-foreground text-center">
-          הכנס לפחות {SMART_SEARCH_MIN} תווים
+          הכנס לפחות {MIN_CHARS} תווים
         </p>
       )}
 
-      {/* Error message */}
-      {error && (
-        <p className="mt-1 text-xs text-destructive text-center">{error}</p>
-      )}
-
-      {/* Results dropdown */}
+      {/* Dropdown */}
       {isOpen && (
         <div className="absolute top-full mt-2 w-full rounded-xl border bg-popover shadow-lg z-50 max-h-80 overflow-y-auto">
           {results.length > 0 ? (
-            <ul role="listbox">
-              {results.map((result, index) => (
-                <li
-                  key={result.id}
-                  role="option"
-                  aria-selected={index === selectedIndex}
-                  onClick={() => selectResult(result.id)}
-                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
-                    index === selectedIndex ? 'bg-accent' : 'hover:bg-accent/50'
-                  }`}
-                >
-                  {mode === 'anime' ? (
-                    <>
-                      <div className="relative h-10 w-7 flex-shrink-0 overflow-hidden rounded bg-muted">
-                        {(result as AnimeResult).cover_image_url ? (
-                          <Image
-                            src={(result as AnimeResult).cover_image_url!}
-                            alt=""
-                            fill
-                            sizes="28px"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="h-full w-full bg-muted" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm truncate">{(result as AnimeResult).title_he}</p>
-                        <p className="text-xs text-muted-foreground truncate anime-title">
-                          {(result as AnimeResult).title_en}</p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-muted">
-                        {(result as FansubResult).logo_url ? (
-                          <Image
-                            src={(result as FansubResult).logo_url!}
-                            alt=""
-                            fill
-                            sizes="32px"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center">
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm truncate">{(result as FansubResult).name}</p>
-                        {(result as FansubResult).description && (
-                          <p className="text-xs text-muted-foreground truncate">
-                            {(result as FansubResult).description}
+            <>
+              <ul role="listbox">
+                {results.map((result, idx) => (
+                  <li
+                    key={result.id}
+                    role="option"
+                    aria-selected={idx === selectedIndex}
+                    onClick={() => navigate(result.id)}
+                    className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                      idx === selectedIndex ? 'bg-accent' : 'hover:bg-accent/50'
+                    }`}
+                  >
+                    {mode === 'anime' ? (
+                      <>
+                        <div className="relative h-10 w-7 flex-shrink-0 overflow-hidden rounded bg-muted">
+                          {(result as AnimeResult).cover_image_url ? (
+                            <Image
+                              src={(result as AnimeResult).cover_image_url!}
+                              alt=""
+                              fill
+                              sizes="28px"
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="h-full w-full bg-muted" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">
+                            {(result as AnimeResult).title_he}
                           </p>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
+                          <p className="text-xs text-muted-foreground truncate anime-title">
+                            {(result as AnimeResult).title_en}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-muted">
+                          {(result as FansubResult).logo_url ? (
+                            <Image
+                              src={(result as FansubResult).logo_url!}
+                              alt=""
+                              fill
+                              sizes="32px"
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center">
+                              <Users className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">
+                            {(result as FansubResult).name}
+                          </p>
+                          {(result as FansubResult).description && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {(result as FansubResult).description}
+                            </p>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {/* View all footer */}
+              <div className="border-t border-border">
+                <Link
+                  href={mode === 'anime' ? `/search?q=${encodeURIComponent(query.trim())}` : '/fansubs'}
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center justify-center gap-1 px-4 py-2.5 text-xs text-primary hover:bg-accent/50 transition-colors"
+                >
+                  {mode === 'anime' ? 'הצג את כל התוצאות' : 'צפה בכל הקבוצות'}
+                  <ArrowLeft className="h-3 w-3" aria-hidden />
+                </Link>
+              </div>
+            </>
           ) : (
-            !isLoading && query.length >= SMART_SEARCH_MIN && (
+            !isLoading && query.trim().length >= MIN_CHARS && (
               <div className="px-4 py-6 text-center text-sm text-muted-foreground space-y-2">
                 <p>לא נמצאו תוצאות עבור &ldquo;{query}&rdquo;</p>
-                {query.length >= 2 && (
-                  <p className="text-xs">חיפוש זה נשמר למאגר הרצונות</p>
-                )}
-                {crossModeCount !== null && crossModeCount > 0 && (
+                <p className="text-xs">חיפוש זה נשמר למאגר הרצונות</p>
+                {crossModeHint && (
                   <button
                     type="button"
-                    onClick={() => handleModeChange(mode === 'anime' ? 'fansub' : 'anime')}
+                    onClick={() => switchMode(mode === 'anime' ? 'fansub' : 'anime')}
                     className="text-xs text-primary hover:underline"
                   >
-                    {mode === 'anime'
-                      ? `נמצאו ${crossModeCount} תוצאות בקבוצות פאנסאב — לחץ לעבור`
-                      : `נמצאו ${crossModeCount} תוצאות באנימה — לחץ לעבור`}
+                    {crossModeHint}
                   </button>
                 )}
                 <div>
@@ -359,20 +359,6 @@ export default function SearchBar() {
                 </div>
               </div>
             )
-          )}
-
-          {/* View-all footer */}
-          {results.length > 0 && (
-            <div className="border-t border-border">
-              <Link
-                href={mode === 'anime' ? `/search?q=${encodeURIComponent(query.trim())}` : '/fansubs'}
-                onClick={() => setIsOpen(false)}
-                className="flex items-center justify-center gap-1 px-4 py-2.5 text-xs text-primary hover:bg-accent/50 transition-colors"
-              >
-                {mode === 'anime' ? 'הצג את כל התוצאות' : 'צפה בכל הקבוצות'}
-                <ArrowLeft className="h-3 w-3" aria-hidden />
-              </Link>
-            </div>
           )}
         </div>
       )}

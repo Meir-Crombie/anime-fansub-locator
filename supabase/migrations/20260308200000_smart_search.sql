@@ -1,9 +1,9 @@
--- Smart Search: lower trigram threshold, broader matching, search fansub descriptions
+-- Smart Search: set trigram threshold INSIDE functions, broader matching
+-- NOTE: set_limit() at migration level only affects this session.
+-- RPC calls run in their own sessions with default threshold (0.3).
+-- We must call set_limit() inside each function to ensure low threshold.
 
--- Lower trigram threshold for better partial/typo matching
-SELECT set_limit(0.08);
-
--- Updated search_animes: normalize input, broader LIKE matching
+-- Updated search_animes: set_limit inside function for typo tolerance
 CREATE OR REPLACE FUNCTION search_animes(search_query TEXT)
 RETURNS TABLE (
   id               UUID,
@@ -17,6 +17,8 @@ RETURNS TABLE (
 DECLARE
   normalized TEXT;
 BEGIN
+  -- Set low threshold for fuzzy matching (default 0.3 is too strict)
+  PERFORM set_limit(0.08);
   normalized := lower(trim(search_query));
 
   RETURN QUERY
@@ -48,7 +50,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
--- Updated search_fansubs: also search description, remove is_active filter for broader matching
+-- Updated search_fansubs: set_limit inside, search description, no is_active filter
 CREATE OR REPLACE FUNCTION search_fansubs(search_query TEXT)
 RETURNS TABLE (
   id                UUID,
@@ -61,6 +63,8 @@ RETURNS TABLE (
 DECLARE
   normalized TEXT;
 BEGIN
+  -- Set low threshold for fuzzy matching
+  PERFORM set_limit(0.08);
   normalized := lower(trim(search_query));
 
   RETURN QUERY
