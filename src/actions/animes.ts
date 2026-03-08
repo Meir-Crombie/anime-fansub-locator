@@ -81,3 +81,29 @@ export async function deleteAnime(id: string) {
   revalidatePath('/admin/animes')
   return { error: null }
 }
+
+const updateAnimeCoverSchema = z.object({
+  anime_id: z.string().uuid(),
+  cover_image_url: z.string().url().max(512).optional().or(z.literal('')),
+})
+
+export async function updateAnimeCoverImage(data: { anime_id: string; cover_image_url: string }) {
+  const parsed = updateAnimeCoverSchema.safeParse(data)
+  if (!parsed.success) return { error: 'נתונים לא תקינים' }
+
+  const supabase = createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { error } = await supabase
+    .from('animes')
+    .update({ cover_image_url: parsed.data.cover_image_url || null })
+    .eq('id', parsed.data.anime_id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/anime/${parsed.data.anime_id}`)
+  revalidatePath('/')
+  revalidatePath('/dashboard')
+  return { error: null }
+}

@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { updateFansubGroup, deleteFansubGroup } from '@/actions/fansubs'
 import { deleteTranslation, updateTranslation, updateEpisodeProgress } from '@/actions/translations'
 import { createAnnouncement, toggleAnnouncementPublished, deleteAnnouncement } from '@/actions/announcements'
+import { updateAnimeCoverImage } from '@/actions/animes'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -108,7 +109,7 @@ export default function DashboardClient({
 
   // Inline translation edit state
   const [editingTranslationId, setEditingTranslationId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState({ status: '', platform: '', direct_link: '', notes: '', translated_episodes: 0, total_episodes: '' })
+  const [editForm, setEditForm] = useState({ status: '', platform: '', direct_link: '', notes: '', translated_episodes: 0, total_episodes: '', cover_image_url: '' })
   const [isSavingTranslation, setIsSavingTranslation] = useState(false)
 
   // Announcements form state
@@ -139,12 +140,14 @@ export default function DashboardClient({
       notes: t.notes ?? '',
       translated_episodes: progress?.translated_episodes ?? 0,
       total_episodes: progress?.total_episodes?.toString() ?? '',
+      cover_image_url: t.animes?.cover_image_url ?? '',
     })
   }
 
   async function handleSaveTranslation() {
     if (!editingTranslationId) return
     setIsSavingTranslation(true)
+    const currentTranslation = translations.find((t) => t.id === editingTranslationId)
     const result = await updateTranslation({
       id: editingTranslationId,
       status: editForm.status,
@@ -159,6 +162,13 @@ export default function DashboardClient({
       translated_episodes: editForm.translated_episodes,
       total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
     })
+    // Update anime cover image if changed
+    if (currentTranslation?.animes && editForm.cover_image_url !== (currentTranslation.animes.cover_image_url ?? '')) {
+      await updateAnimeCoverImage({
+        anime_id: currentTranslation.animes.id,
+        cover_image_url: editForm.cover_image_url,
+      })
+    }
     if (!result.error) {
       setTranslationsMap((prev) => ({
         ...prev,
@@ -174,6 +184,7 @@ export default function DashboardClient({
                   translated_episodes: editForm.translated_episodes,
                   total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
                 }],
+                animes: t.animes ? { ...t.animes, cover_image_url: editForm.cover_image_url || null } : null,
               }
             : t
         ),
@@ -482,6 +493,16 @@ export default function DashboardClient({
                     {/* Inline edit form */}
                     {isEditing && (
                       <div className="mt-3 pt-3 border-t space-y-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium">תמונת כיסוי (URL)</label>
+                          <Input
+                            type="url"
+                            dir="ltr"
+                            placeholder="https://example.com/cover.jpg"
+                            value={editForm.cover_image_url}
+                            onChange={(e) => setEditForm((p) => ({ ...p, cover_image_url: e.target.value }))}
+                          />
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <label className="text-xs font-medium">סטטוס</label>

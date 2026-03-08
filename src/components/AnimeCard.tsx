@@ -23,8 +23,8 @@ export default function AnimeCard({ anime }: AnimeCardProps) {
       href={`/anime/${anime.id}`}
       className="group block rounded-xl border bg-card overflow-hidden transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5"
     >
-      {/* Cover image */}
-      <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted">
+      {/* Cover banner */}
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
         {anime.cover_image_url ? (
           <Image
             src={anime.cover_image_url}
