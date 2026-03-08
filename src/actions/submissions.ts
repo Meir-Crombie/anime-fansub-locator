@@ -88,7 +88,7 @@ export async function approveSubmission(submissionId: string) {
   }
 
   // 2. Try to find fansub group by name
-  const fansubName = submission.translator_name
+  const fansubName = (submission as Record<string, unknown>).fansub_name_custom as string | null || submission.translator_name
   const { data: existingFansub } = await supabase
     .from('fansub_groups')
     .select('id')
@@ -96,27 +96,46 @@ export async function approveSubmission(submissionId: string) {
     .limit(1)
     .maybeSingle()
 
-  // 3. If fansub found, create translation entry
+  let fansubId: string
+
   if (existingFansub) {
-    // Map status: 'unknown' → 'ongoing'
-    const statusMap: Record<string, string> = { ongoing: 'ongoing', completed: 'completed', unknown: 'ongoing', dropped: 'dropped' }
-    const dbStatus = (statusMap[submission.status] ?? 'ongoing') as 'ongoing' | 'completed' | 'dropped'
+    fansubId = existingFansub.id
+  } else {
+    // Create a new fansub group for this translator/group
+    const { data: newFansub, error: fansubErr } = await supabase
+      .from('fansub_groups')
+      .insert({
+        name: fansubName,
+        description: null,
+        is_active: true,
+        status: 'approved' as const,
+      })
+      .select('id')
+      .single()
 
-    // Map platform: 'other' → 'website'
-    const platformMap: Record<string, string> = { website: 'website', telegram: 'telegram', discord: 'discord', youtube: 'youtube', other: 'website' }
-    const dbPlatform = (platformMap[submission.platform_type] ?? 'website') as 'website' | 'telegram' | 'discord' | 'youtube'
-
-    await supabase
-      .from('translations')
-      .upsert({
-        anime_id: animeId,
-        fansub_id: existingFansub.id,
-        status: dbStatus,
-        platform: dbPlatform,
-        direct_link: submission.translation_url,
-        notes: submission.description ?? null,
-      }, { onConflict: 'anime_id,fansub_id,platform' })
+    if (fansubErr || !newFansub) return { error: 'שגיאה ביצירת קבוצת פאנסאב: ' + (fansubErr?.message ?? '') }
+    fansubId = newFansub.id
   }
+
+  // 3. Create translation entry
+  // Map status: 'unknown' → 'ongoing'
+  const statusMap: Record<string, string> = { ongoing: 'ongoing', completed: 'completed', unknown: 'ongoing', dropped: 'dropped' }
+  const dbStatus = (statusMap[submission.status] ?? 'ongoing') as 'ongoing' | 'completed' | 'dropped'
+
+  // Map platform: 'other' → 'website'
+  const platformMap: Record<string, string> = { website: 'website', telegram: 'telegram', discord: 'discord', youtube: 'youtube', other: 'website' }
+  const dbPlatform = (platformMap[submission.platform_type] ?? 'website') as 'website' | 'telegram' | 'discord' | 'youtube'
+
+  await supabase
+    .from('translations')
+    .upsert({
+      anime_id: animeId,
+      fansub_id: fansubId,
+      status: dbStatus,
+      platform: dbPlatform,
+      direct_link: submission.translation_url,
+      notes: submission.description ?? null,
+    }, { onConflict: 'anime_id,fansub_id,platform' })
 
   // 4. Mark submission as verified
   const { error } = await supabase
@@ -130,6 +149,8 @@ export async function approveSubmission(submissionId: string) {
   revalidatePath('/admin/submissions')
   revalidatePath('/')
   revalidatePath(`/anime/${animeId}`)
+  revalidatePath(`/fansub/${fansubId}`)
+  revalidatePath('/fansubs')
   return { error: null }
 }
 
