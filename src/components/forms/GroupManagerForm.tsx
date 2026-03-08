@@ -18,7 +18,6 @@ const STATUS_OPTIONS = [
 const PLATFORM_OPTIONS = [
   { value: 'website', label: 'אתר אינטרנט', icon: '🌐' },
   { value: 'telegram', label: 'טלגרם', icon: '✈️' },
-  { value: 'discord', label: 'דיסקורד', icon: '🎮' },
   { value: 'youtube', label: 'יוטיוב', icon: '▶' },
 ] as const
 
