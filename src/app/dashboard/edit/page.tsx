@@ -14,7 +14,8 @@ export default async function DashboardEditPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile || !['manager', 'admin', 'super_admin'].includes(profile.role)) {
+  const ALLOWED_ROLES = ['manager', 'admin', 'super_admin']
+  if (!profile || !ALLOWED_ROLES.includes(profile.role)) {
     redirect('/dashboard')
   }
 
