@@ -4,17 +4,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'cdn.myanimelist.net',
-        pathname: '/images/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'cdn.myanimelist.net',
-        pathname: '/anime/**',
-      },
-      {
-        protocol: 'https',
-        hostname: '*.supabase.co',
+        hostname: '**',
       },
       {
         protocol: 'http',
