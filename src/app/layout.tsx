@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Heebo, Inter } from 'next/font/google'
+import { Heebo, Inter, Space_Mono, Syne } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import Navbar from '@/components/Navbar'
@@ -16,6 +16,20 @@ const heebo = Heebo({
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
+  display: 'swap',
+})
+
+const spaceMono = Space_Mono({
+  subsets: ['latin'],
+  weight: '700',
+  variable: '--font-space-mono',
+  display: 'swap',
+})
+
+const syne = Syne({
+  subsets: ['latin'],
+  weight: ['700', '800'],
+  variable: '--font-syne',
   display: 'swap',
 })
 
@@ -53,7 +67,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="he" dir="rtl" className={`${heebo.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="he" dir="rtl" className={`${heebo.variable} ${inter.variable} ${spaceMono.variable} ${syne.variable}`} suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground font-heebo antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <div className="min-h-screen flex flex-col">

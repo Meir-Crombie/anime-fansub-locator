@@ -60,6 +60,14 @@ const config: Config = {
   			inter: [
   				'var(--font-inter)',
   				'sans-serif'
+  			],
+  			'space-mono': [
+  				'var(--font-space-mono)',
+  				'monospace'
+  			],
+  			syne: [
+  				'var(--font-syne)',
+  				'sans-serif'
   			]
   		},
   		borderRadius: {

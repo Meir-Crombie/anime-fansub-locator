@@ -3,6 +3,7 @@
 import { z } from 'zod'
 import { createServerClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { groupManagerFormSchema } from '@/lib/validations/submission'
 
 const upsertTranslationSchema = z.object({
   anime_id: z.string().uuid(),
@@ -125,4 +126,93 @@ export async function updateEpisodeProgress(data: unknown) {
   revalidatePath('/dashboard')
   revalidatePath(`/fansub/${translation.fansub_id}`)
   return { error: null }
+}
+
+export async function submitManagerTranslation(formData: Record<string, unknown>) {
+  const supabase = createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const parsed = groupManagerFormSchema.safeParse(formData)
+  if (!parsed.success) return { error: parsed.error.flatten() }
+
+  // Get manager's fansub group
+  const { data: fansub } = await supabase
+    .from('fansub_groups')
+    .select('id')
+    .eq('manager_uid', user.id)
+    .single()
+
+  if (!fansub) {
+    // Check if admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
+      throw new Error('Forbidden: no fansub group found')
+    }
+    throw new Error('Admin must use the admin panel to manage translations')
+  }
+
+  // Upsert anime by Hebrew name
+  const { data: existing } = await supabase
+    .from('animes')
+    .select('id')
+    .ilike('title_he', parsed.data.anime_name.trim())
+    .maybeSingle()
+
+  let animeId: string
+
+  if (existing) {
+    animeId = existing.id
+  } else {
+    const { data: newAnime, error: animeError } = await supabase
+      .from('animes')
+      .insert({
+        title_he: parsed.data.anime_name.trim(),
+        title_en: parsed.data.anime_name_en?.trim() ?? '',
+      })
+      .select('id')
+      .single()
+    if (animeError || !newAnime) throw new Error(animeError?.message ?? 'Failed to create anime')
+    animeId = newAnime.id
+  }
+
+  // Build notes from optional fields
+  const notesParts: string[] = []
+  if (parsed.data.episode_range) notesParts.push(`פרקים: ${parsed.data.episode_range}`)
+  if (parsed.data.release_date) notesParts.push(`תאריך: ${parsed.data.release_date}`)
+  if (parsed.data.quality) notesParts.push(`איכות: ${parsed.data.quality}`)
+  if (parsed.data.notes) notesParts.push(parsed.data.notes)
+  const combinedNotes = notesParts.length > 0 ? notesParts.join(' | ') : null
+
+  // Map status — 'paused' is stored as 'dropped' in the DB enum
+  const dbStatus = parsed.data.status === 'paused' ? 'dropped' : parsed.data.status
+  const validStatus = dbStatus as 'ongoing' | 'completed' | 'dropped'
+
+  // Map platform — use primary platform
+  const primaryPlatform = parsed.data.platforms[0]
+
+  const { error: translationError } = await supabase
+    .from('translations')
+    .upsert({
+      anime_id: animeId,
+      fansub_id: fansub.id,
+      status: validStatus,
+      platform: primaryPlatform,
+      direct_link: parsed.data.direct_link,
+      notes: combinedNotes,
+    }, {
+      onConflict: 'anime_id,fansub_id,platform',
+    })
+
+  if (translationError) throw new Error(translationError.message)
+
+  revalidatePath(`/anime/${animeId}`)
+  revalidatePath('/dashboard')
+  revalidatePath(`/fansub/${fansub.id}`)
+  revalidatePath('/')
+  return { error: null, animeId }
 }
