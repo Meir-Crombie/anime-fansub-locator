@@ -9,6 +9,7 @@ import {
   type UserSubmissionFormValues,
 } from '@/lib/validations/submission'
 import { GENRES } from '@/lib/constants'
+import ImageUpload from '@/components/ImageUpload'
 
 const TOTAL_STEPS = 4
 
@@ -210,14 +211,10 @@ export default function UserSubmissionForm() {
                 />
               </div>
               <div>
-                <SectionLabel label="קישור לתמונת כיסוי" />
-                <input
-                  type="url"
+                <SectionLabel label="תמונת כיסוי" />
+                <ImageUpload
                   value={(formData as Record<string, unknown>).cover_image_url as string ?? ''}
-                  onChange={(e) => updateField('cover_image_url' as keyof UserSubmissionFormValues, e.target.value as never)}
-                  placeholder="https://example.com/cover.jpg"
-                  className="usf-input"
-                  style={{ direction: 'ltr', textAlign: 'left' }}
+                  onChange={(url) => updateField('cover_image_url' as keyof UserSubmissionFormValues, url as never)}
                 />
               </div>
               <div>

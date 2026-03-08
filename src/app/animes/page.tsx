@@ -53,7 +53,7 @@ export default async function AnimesPage({ searchParams }: AnimesPageProps) {
     finalQuery = finalQuery.gte('total_episodes', 26)
   }
 
-  const { data, error } = await finalQuery.limit(100)
+  const { data, error } = await finalQuery.limit(500)
 
   if (error) {
     return (

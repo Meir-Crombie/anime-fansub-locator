@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ImageUpload from '@/components/ImageUpload'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
@@ -552,13 +553,10 @@ export default function DashboardClient({
                         </div>
                         {/* Cover image */}
                         <div className="space-y-1">
-                          <label className="text-xs font-medium">תמונת כיסוי (URL)</label>
-                          <Input
-                            type="url"
-                            dir="ltr"
-                            placeholder="https://example.com/cover.jpg"
+                          <label className="text-xs font-medium">תמונת כיסוי</label>
+                          <ImageUpload
                             value={editForm.cover_image_url}
-                            onChange={(e) => setEditForm((p) => ({ ...p, cover_image_url: e.target.value }))}
+                            onChange={(url) => setEditForm((p) => ({ ...p, cover_image_url: url }))}
                           />
                         </div>
                         {/* Genres */}

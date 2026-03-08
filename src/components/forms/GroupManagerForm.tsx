@@ -8,6 +8,7 @@ import {
   type GroupManagerFormValues,
 } from '@/lib/validations/submission'
 import { GENRES } from '@/lib/constants'
+import ImageUpload from '@/components/ImageUpload'
 
 interface AnimeResult {
   id: string
@@ -291,16 +292,12 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
             )}
           </div>
 
-          {/* Cover Image URL — optional */}
+          {/* Cover Image — upload */}
           <div>
-            <SectionLabel label="קישור לתמונת כיסוי" optional />
-            <input
-              type="url"
+            <SectionLabel label="תמונת כיסוי" optional />
+            <ImageUpload
               value={formData.cover_image_url ?? ''}
-              onChange={(e) => updateField('cover_image_url', e.target.value)}
-              placeholder="https://example.com/cover.jpg"
-              className="form-input-base"
-              style={{ direction: 'ltr', textAlign: 'left' }}
+              onChange={(url) => updateField('cover_image_url', url)}
             />
           </div>
 
