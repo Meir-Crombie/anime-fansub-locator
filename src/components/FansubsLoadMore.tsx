@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 import type { FansubGroup } from '@/lib/types'
 
-type FansubWithCount = FansubGroup & { translations: { count: number }[] }
+type FansubWithCount = FansubGroup & { translations: { count: number }[]; ratings?: { score: number }[] }
 
 interface FansubsLoadMoreProps {
   initialFansubs: FansubWithCount[]
@@ -28,7 +28,7 @@ export default function FansubsLoadMore({ initialFansubs, totalCount }: FansubsL
 
     const { data } = await supabase
       .from('fansub_groups')
-      .select('*, translations(count)')
+      .select('*, translations(count), ratings(score)')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .range(offset, offset + PAGE_SIZE - 1)

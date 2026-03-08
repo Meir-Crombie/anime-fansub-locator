@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   const supabase = createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: fansub } = await supabase
+  const { data: fansubs } = await supabase
     .from('fansub_groups')
     .select(`
       *,
@@ -26,7 +26,9 @@ export default async function DashboardPage() {
       announcements (id, title, type, created_at, is_published)
     `)
     .eq('manager_uid', user!.id)
-    .single()
+    .limit(1)
+
+  const fansub = fansubs?.[0] ?? null
 
   if (!fansub) {
     return (

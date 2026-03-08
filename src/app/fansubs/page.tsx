@@ -18,7 +18,7 @@ export default async function FansubsPage() {
 
   const { data: fansubs } = await supabase
     .from('fansub_groups')
-    .select('*, translations(count)')
+    .select('*, translations(count), ratings(score)')
     .eq('is_active', true)
     .order('created_at', { ascending: false })
     .range(0, 11)

@@ -137,11 +137,13 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
   if (!parsed.success) return { error: parsed.error.flatten() }
 
   // Get manager's fansub group
-  const { data: fansub } = await supabase
+  const { data: fansubs } = await supabase
     .from('fansub_groups')
     .select('id')
     .eq('manager_uid', user.id)
-    .single()
+    .limit(1)
+
+  const fansub = fansubs?.[0] ?? null
 
   if (!fansub) {
     // Check if admin

@@ -59,7 +59,6 @@ export default async function FansubPage({ params }: FansubPageProps) {
       )
     `)
     .eq('id', params.id)
-    .eq('is_active', true)
     .single()
 
   if (error || !fansub) notFound()

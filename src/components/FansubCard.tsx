@@ -1,13 +1,13 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { ExternalLink, Send, MessageSquare } from 'lucide-react'
+import { ExternalLink, Send, MessageSquare, Star } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { FansubGroup } from '@/lib/types'
 
 interface FansubCardProps {
-  fansub: FansubGroup & { translations?: { count: number }[] }
+  fansub: FansubGroup & { translations?: { count: number }[]; ratings?: { score: number }[] }
 }
 
 export default function FansubCard({ fansub }: FansubCardProps) {
@@ -15,6 +15,11 @@ export default function FansubCard({ fansub }: FansubCardProps) {
 
   const yearsActive = fansub.established_year
     ? new Date().getFullYear() - fansub.established_year
+    : null
+
+  const ratings = fansub.ratings ?? []
+  const avgRating = ratings.length > 0
+    ? (ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length).toFixed(1)
     : null
 
   return (
@@ -62,7 +67,14 @@ export default function FansubCard({ fansub }: FansubCardProps) {
         <CardContent className="pt-0 space-y-3">
           {/* Stats row */}
           <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-xs text-muted-foreground">אין דירוג עדיין</span>
+            {avgRating ? (
+              <span className="flex items-center gap-1 text-xs text-yellow-600 dark:text-yellow-400">
+                <Star className="h-3.5 w-3.5 fill-current" aria-hidden />
+                {avgRating}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">אין דירוג עדיין</span>
+            )}
             {translationCount !== null && (
               <Badge variant="secondary">{translationCount} תרגומים</Badge>
             )}
