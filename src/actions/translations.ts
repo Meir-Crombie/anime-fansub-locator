@@ -214,3 +214,52 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
   revalidatePath('/')
   return { error: null, animeId }
 }
+
+const updateTranslationSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(['ongoing', 'completed', 'dropped']),
+  platform: z.enum(['website', 'telegram', 'discord', 'youtube']),
+  direct_link: z.string().url(),
+  notes: z.string().max(500).optional().nullable(),
+})
+
+export async function updateTranslation(data: {
+  id: string
+  status: string
+  platform: string
+  direct_link: string
+  notes?: string | null
+}) {
+  const parsed = updateTranslationSchema.safeParse(data)
+  if (!parsed.success) return { error: 'נתונים לא תקינים' }
+
+  const supabase = createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { data: t } = await supabase
+    .from('translations')
+    .select('fansub_id, anime_id')
+    .eq('id', parsed.data.id)
+    .single()
+  if (!t) return { error: 'תרגום לא נמצא' }
+
+  await verifyManager(supabase, t.fansub_id, user.id)
+
+  const { error } = await supabase
+    .from('translations')
+    .update({
+      status: parsed.data.status,
+      platform: parsed.data.platform,
+      direct_link: parsed.data.direct_link,
+      notes: parsed.data.notes ?? null,
+    })
+    .eq('id', parsed.data.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/anime/${t.anime_id}`)
+  revalidatePath('/dashboard')
+  revalidatePath(`/fansub/${t.fansub_id}`)
+  return { error: null }
+}

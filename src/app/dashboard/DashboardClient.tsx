@@ -1,19 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { updateFansubGroup, deleteFansubGroup } from '@/actions/fansubs'
-import { deleteTranslation } from '@/actions/translations'
+import { deleteTranslation, updateTranslation } from '@/actions/translations'
 import { createAnnouncement, toggleAnnouncementPublished, deleteAnnouncement } from '@/actions/announcements'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { TranslationBadge } from '@/components/TranslationBadge'
 import EmptyState from '@/components/EmptyState'
-import { Plus, Trash2, Loader2, Pencil, Megaphone, Eye, EyeOff, Settings } from 'lucide-react'
+import { Plus, Trash2, Loader2, Pencil, Megaphone, Eye, EyeOff, Settings, Star, Check, X } from 'lucide-react'
+import { formatDate } from '@/lib/utils'
 import type { FansubGroup } from '@/lib/types'
 
 type TranslationRow = {
@@ -35,10 +39,25 @@ type AnnouncementRow = {
   is_published: boolean
 }
 
-interface DashboardClientProps {
+type RatingRow = {
+  score: number
+  review: string | null
+  created_at: string
+}
+
+type GroupData = {
   fansub: FansubGroup
   translations: TranslationRow[]
   announcements: AnnouncementRow[]
+  ratings: RatingRow[]
+  ratingCount: number
+  avgRating: string | null
+}
+
+interface DashboardClientProps {
+  allGroups: { id: string; name: string }[]
+  groupDataMap: Record<string, GroupData>
+  defaultGroupId: string
 }
 
 const ANNOUNCEMENT_TYPE_LABELS: Record<string, string> = {
@@ -48,26 +67,107 @@ const ANNOUNCEMENT_TYPE_LABELS: Record<string, string> = {
   general: 'כללי',
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  ongoing: 'בתרגום',
+  completed: 'הושלם',
+  dropped: 'ננטש',
+}
+
+const PLATFORM_LABELS: Record<string, string> = {
+  website: 'אתר',
+  telegram: 'טלגרם',
+  discord: 'דיסקורד',
+  youtube: 'יוטיוב',
+}
+
 export default function DashboardClient({
-  fansub,
-  translations: initialTranslations,
-  announcements: initialAnnouncements,
+  allGroups,
+  groupDataMap,
+  defaultGroupId,
 }: DashboardClientProps) {
   const router = useRouter()
+  const [selectedGroupId, setSelectedGroupId] = useState(defaultGroupId)
+  const currentData = groupDataMap[selectedGroupId]
+
+  const fansub = currentData.fansub
+  const [translationsMap, setTranslationsMap] = useState<Record<string, TranslationRow[]>>(
+    Object.fromEntries(Object.entries(groupDataMap).map(([id, d]) => [id, d.translations]))
+  )
+  const [announcementsMap, setAnnouncementsMap] = useState<Record<string, AnnouncementRow[]>>(
+    Object.fromEntries(Object.entries(groupDataMap).map(([id, d]) => [id, d.announcements]))
+  )
+
+  const translations = translationsMap[selectedGroupId] ?? []
+  const announcements = announcementsMap[selectedGroupId] ?? []
+
   const [isEditingGroup, setIsEditingGroup] = useState(false)
   const [isSavingGroup, setIsSavingGroup] = useState(false)
   const [groupError, setGroupError] = useState<string | null>(null)
-
-  const [translations, setTranslations] = useState(initialTranslations)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [isDeletingGroup, setIsDeletingGroup] = useState(false)
 
-  const [announcements, setAnnouncements] = useState(initialAnnouncements)
+  // Inline translation edit state
+  const [editingTranslationId, setEditingTranslationId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ status: '', platform: '', direct_link: '', notes: '' })
+  const [isSavingTranslation, setIsSavingTranslation] = useState(false)
+
+  // Announcements form state
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false)
   const [annTitle, setAnnTitle] = useState('')
   const [annContent, setAnnContent] = useState('')
   const [annType, setAnnType] = useState('general')
   const [isSavingAnn, setIsSavingAnn] = useState(false)
-  const [isDeletingGroup, setIsDeletingGroup] = useState(false)
+
+  // Stats
+  const completedCount = useMemo(() => translations.filter((t) => t.status === 'completed').length, [translations])
+  const ongoingCount = useMemo(() => translations.filter((t) => t.status === 'ongoing').length, [translations])
+
+  function handleGroupSwitch(groupId: string) {
+    setSelectedGroupId(groupId)
+    setIsEditingGroup(false)
+    setEditingTranslationId(null)
+    setShowAnnouncementForm(false)
+  }
+
+  function startEditTranslation(t: TranslationRow) {
+    setEditingTranslationId(t.id)
+    setEditForm({
+      status: t.status,
+      platform: t.platform,
+      direct_link: t.direct_link,
+      notes: t.notes ?? '',
+    })
+  }
+
+  async function handleSaveTranslation() {
+    if (!editingTranslationId) return
+    setIsSavingTranslation(true)
+    const result = await updateTranslation({
+      id: editingTranslationId,
+      status: editForm.status,
+      platform: editForm.platform,
+      direct_link: editForm.direct_link,
+      notes: editForm.notes || null,
+    })
+    if (!result.error) {
+      setTranslationsMap((prev) => ({
+        ...prev,
+        [selectedGroupId]: prev[selectedGroupId].map((t) =>
+          t.id === editingTranslationId
+            ? {
+                ...t,
+                status: editForm.status as TranslationRow['status'],
+                platform: editForm.platform as TranslationRow['platform'],
+                direct_link: editForm.direct_link,
+                notes: editForm.notes || null,
+              }
+            : t
+        ),
+      }))
+      setEditingTranslationId(null)
+    }
+    setIsSavingTranslation(false)
+  }
 
   async function handleSaveGroup(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -95,7 +195,10 @@ export default function DashboardClient({
     if (!confirm('האם למחוק את התרגום?')) return
     setDeletingId(id)
     await deleteTranslation(id)
-    setTranslations((prev) => prev.filter((t) => t.id !== id))
+    setTranslationsMap((prev) => ({
+      ...prev,
+      [selectedGroupId]: prev[selectedGroupId].filter((t) => t.id !== id),
+    }))
     setDeletingId(null)
   }
 
@@ -134,19 +237,77 @@ export default function DashboardClient({
 
   async function handleToggleAnnouncement(id: string, current: boolean) {
     await toggleAnnouncementPublished(id, fansub.id, current)
-    setAnnouncements((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, is_published: !current } : a))
-    )
+    setAnnouncementsMap((prev) => ({
+      ...prev,
+      [selectedGroupId]: prev[selectedGroupId].map((a) =>
+        a.id === id ? { ...a, is_published: !current } : a
+      ),
+    }))
   }
 
   async function handleDeleteAnnouncement(id: string) {
     if (!confirm('האם למחוק את העדכון?')) return
     await deleteAnnouncement(id, fansub.id)
-    setAnnouncements((prev) => prev.filter((a) => a.id !== id))
+    setAnnouncementsMap((prev) => ({
+      ...prev,
+      [selectedGroupId]: prev[selectedGroupId].filter((a) => a.id !== id),
+    }))
   }
 
   return (
     <>
+      {/* Header + Group Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-2xl font-bold">לוח בקרה</h1>
+        {allGroups.length > 1 ? (
+          <Select value={selectedGroupId} onValueChange={handleGroupSwitch}>
+            <SelectTrigger className="w-full sm:w-64">
+              <SelectValue placeholder="בחר קבוצה" />
+            </SelectTrigger>
+            <SelectContent>
+              {allGroups.map((g) => (
+                <SelectItem key={g.id} value={g.id}>
+                  {g.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <p className="text-muted-foreground">{fansub.name}</p>
+        )}
+      </div>
+
+      {/* Stats */}
+      <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-2xl font-bold">{translations.length}</p>
+            <p className="text-xs text-muted-foreground">סה&ldquo;כ תרגומים</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-2xl font-bold text-green-600">{completedCount}</p>
+            <p className="text-xs text-muted-foreground">הושלמו</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-2xl font-bold text-yellow-600">{ongoingCount}</p>
+            <p className="text-xs text-muted-foreground">בתרגום</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 text-center">
+            <div className="flex items-center justify-center gap-1">
+              <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" aria-hidden />
+              <span className="text-2xl font-bold">{currentData.avgRating ?? '-'}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">{currentData.ratingCount} דירוגים</p>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* Section 1: Group Details */}
       <section>
         <Card>
@@ -258,41 +419,111 @@ export default function DashboardClient({
             {translations.map((t) => {
               if (!t.animes) return null
               const progress = t.episode_progress?.[0]
+              const isEditing = editingTranslationId === t.id
               return (
                 <Card key={t.id}>
-                  <CardContent className="flex flex-wrap items-center gap-3 py-3">
-                    <div className="relative h-10 w-8 flex-shrink-0 overflow-hidden rounded bg-muted">
-                      {t.animes.cover_image_url ? (
-                        <Image src={t.animes.cover_image_url} alt={t.animes.title_he} fill sizes="32px" className="object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-[8px]">🎬</div>
+                  <CardContent className="py-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="relative h-10 w-8 flex-shrink-0 overflow-hidden rounded bg-muted">
+                        {t.animes.cover_image_url ? (
+                          <Image src={t.animes.cover_image_url} alt={t.animes.title_he} fill sizes="32px" className="object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[8px]">🎬</div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/anime/${t.animes.id}`} className="font-medium text-sm hover:text-primary transition-colors">
+                          {t.animes.title_he}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">{t.animes.title_en}</p>
+                      </div>
+                      <TranslationBadge status={t.status} platform={t.platform} />
+                      {progress && (
+                        <span className="text-xs text-muted-foreground">
+                          {progress.translated_episodes}/{progress.total_episodes ?? '?'}
+                        </span>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => isEditing ? setEditingTranslationId(null) : startEditTranslation(t)}
+                        title={isEditing ? 'סגור עריכה' : 'ערוך תרגום'}
+                      >
+                        {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteTranslation(t.id)}
+                        disabled={deletingId === t.id}
+                      >
+                        {deletingId === t.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <Link href={`/anime/${t.animes.id}`} className="font-medium text-sm hover:text-primary transition-colors">
-                        {t.animes.title_he}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">{t.animes.title_en}</p>
-                    </div>
-                    <TranslationBadge status={t.status} platform={t.platform} />
-                    {progress && (
-                      <span className="text-xs text-muted-foreground">
-                        {progress.translated_episodes}/{progress.total_episodes ?? '?'}
-                      </span>
+                    {/* Inline edit form */}
+                    {isEditing && (
+                      <div className="mt-3 pt-3 border-t space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium">סטטוס</label>
+                            <Select value={editForm.status} onValueChange={(v) => setEditForm((p) => ({ ...p, status: v }))}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(STATUS_LABELS).map(([val, label]) => (
+                                  <SelectItem key={val} value={val}>{label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium">פלטפורמה</label>
+                            <Select value={editForm.platform} onValueChange={(v) => setEditForm((p) => ({ ...p, platform: v }))}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(PLATFORM_LABELS).map(([val, label]) => (
+                                  <SelectItem key={val} value={val}>{label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium">קישור ישיר</label>
+                          <Input
+                            type="url"
+                            dir="ltr"
+                            value={editForm.direct_link}
+                            onChange={(e) => setEditForm((p) => ({ ...p, direct_link: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium">הערות</label>
+                          <textarea
+                            value={editForm.notes}
+                            onChange={(e) => setEditForm((p) => ({ ...p, notes: e.target.value }))}
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[40px] resize-y"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={handleSaveTranslation} disabled={isSavingTranslation}>
+                            {isSavingTranslation ? <Loader2 className="h-4 w-4 me-1 animate-spin" /> : <Check className="h-4 w-4 me-1" />}
+                            שמור
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingTranslationId(null)}>
+                            ביטול
+                          </Button>
+                        </div>
+                      </div>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => handleDeleteTranslation(t.id)}
-                      disabled={deletingId === t.id}
-                    >
-                      {deletingId === t.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
                   </CardContent>
                 </Card>
               )
@@ -394,6 +625,37 @@ export default function DashboardClient({
           </div>
         )}
       </section>
+
+      {/* Section 4: Latest Reviews */}
+      {currentData.ratings.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">ביקורות אחרונות</h2>
+          <div className="space-y-2">
+            {currentData.ratings.map((r, i) => (
+              <Card key={i}>
+                <CardContent className="py-3 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`h-3.5 w-3.5 ${
+                            star <= r.score
+                              ? 'text-yellow-500 fill-yellow-500'
+                              : 'text-muted-foreground'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs text-muted-foreground">{formatDate(r.created_at)}</span>
+                  </div>
+                  {r.review && <p className="text-sm">{r.review}</p>}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   )
 }

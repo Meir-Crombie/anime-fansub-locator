@@ -1,10 +1,7 @@
 import { createServerClient } from '@/lib/supabase/server'
-import { Card, CardContent } from '@/components/ui/card'
-import EmptyState from '@/components/EmptyState'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Star, Plus } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import { Plus } from 'lucide-react'
 import DashboardClient from './DashboardClient'
 
 export default async function DashboardPage() {
@@ -71,22 +68,6 @@ export default async function DashboardPage() {
     )
   }
 
-  // Use first fansub as default
-  const fansub = allFansubs[0]
-
-  // Get ratings for stats
-  const { data: allRatingsData } = await supabase
-    .from('ratings')
-    .select('score')
-    .eq('fansub_id', fansub.id)
-
-  const { data: ratings } = await supabase
-    .from('ratings')
-    .select('score, review, created_at')
-    .eq('fansub_id', fansub.id)
-    .order('created_at', { ascending: false })
-    .limit(5)
-
   type TranslationRow = {
     id: string
     status: 'ongoing' | 'completed' | 'dropped'
@@ -106,97 +87,59 @@ export default async function DashboardPage() {
     is_published: boolean
   }
 
-  const translations = (fansub.translations ?? []) as unknown as TranslationRow[]
-  const announcements = (fansub.announcements ?? []) as unknown as AnnouncementRow[]
+  type RatingRow = {
+    score: number
+    review: string | null
+    created_at: string
+  }
 
-  const completedCount = translations.filter((t) => t.status === 'completed').length
-  const ongoingCount = translations.filter((t) => t.status === 'ongoing').length
+  type GroupData = {
+    fansub: typeof allFansubs[number]
+    translations: TranslationRow[]
+    announcements: AnnouncementRow[]
+    ratings: RatingRow[]
+    ratingCount: number
+    avgRating: string | null
+  }
 
-  const ratingCount = allRatingsData?.length ?? 0
-  const ratingTotal = allRatingsData?.reduce((sum, r) => sum + r.score, 0) ?? 0
-  const avgRating = ratingCount > 0
-    ? (ratingTotal / ratingCount).toFixed(1)
-    : null
+  // Build data map for all groups
+  const groupDataMap: Record<string, GroupData> = {}
 
-  // Build group names for multi-group switcher
+  for (const f of allFansubs) {
+    const { data: allRatingsData } = await supabase
+      .from('ratings')
+      .select('score')
+      .eq('fansub_id', f.id)
+
+    const { data: ratings } = await supabase
+      .from('ratings')
+      .select('score, review, created_at')
+      .eq('fansub_id', f.id)
+      .order('created_at', { ascending: false })
+      .limit(5)
+
+    const ratingCount = allRatingsData?.length ?? 0
+    const ratingTotal = allRatingsData?.reduce((sum, r) => sum + r.score, 0) ?? 0
+
+    groupDataMap[f.id] = {
+      fansub: f,
+      translations: (f.translations ?? []) as unknown as TranslationRow[],
+      announcements: (f.announcements ?? []) as unknown as AnnouncementRow[],
+      ratings: (ratings ?? []) as RatingRow[],
+      ratingCount,
+      avgRating: ratingCount > 0 ? (ratingTotal / ratingCount).toFixed(1) : null,
+    }
+  }
+
   const groupOptions = allFansubs.map((f) => ({ id: f.id, name: f.name }))
 
   return (
     <main className="container mx-auto max-w-4xl px-4 py-8 space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">לוח בקרה</h1>
-        {allFansubs.length > 1 ? (
-          <p className="text-sm text-muted-foreground mt-1">
-            מנהל {allFansubs.length} קבוצות — מציג: {fansub.name}
-          </p>
-        ) : (
-          <p className="text-muted-foreground">{fansub.name}</p>
-        )}
-      </div>
-
-      {/* Stats */}
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="py-4 text-center">
-            <p className="text-2xl font-bold">{translations.length}</p>
-            <p className="text-xs text-muted-foreground">סה&ldquo;כ תרגומים</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4 text-center">
-            <p className="text-2xl font-bold text-green-600">{completedCount}</p>
-            <p className="text-xs text-muted-foreground">הושלמו</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4 text-center">
-            <p className="text-2xl font-bold text-yellow-600">{ongoingCount}</p>
-            <p className="text-xs text-muted-foreground">בתרגום</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4 text-center">
-            <div className="flex items-center justify-center gap-1">
-              <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" aria-hidden />
-              <span className="text-2xl font-bold">{avgRating ?? '-'}</span>
-            </div>
-            <p className="text-xs text-muted-foreground">{ratingCount} דירוגים</p>
-          </CardContent>
-        </Card>
-      </section>
-
-      <DashboardClient fansub={fansub} translations={translations} announcements={announcements} />
-
-      {/* Latest Reviews */}
-      {ratings && ratings.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-xl font-semibold">ביקורות אחרונות</h2>
-          <div className="space-y-2">
-            {ratings.map((r, i) => (
-              <Card key={i}>
-                <CardContent className="py-3 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-0.5">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          className={`h-3.5 w-3.5 ${
-                            star <= r.score
-                              ? 'text-yellow-500 fill-yellow-500'
-                              : 'text-muted-foreground'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-xs text-muted-foreground">{formatDate(r.created_at)}</span>
-                  </div>
-                  {r.review && <p className="text-sm">{r.review}</p>}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
+      <DashboardClient
+        allGroups={groupOptions}
+        groupDataMap={groupDataMap}
+        defaultGroupId={allFansubs[0].id}
+      />
     </main>
   )
 }
