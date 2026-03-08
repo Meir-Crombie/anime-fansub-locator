@@ -61,7 +61,10 @@ export default async function FansubPage({ params }: FansubPageProps) {
     .eq('id', params.id)
     .single()
 
-  if (error || !fansub) notFound()
+  if (error || !fansub) {
+    console.error('[FansubPage] Query error:', error, 'Fansub:', fansub, 'ID:', params.id)
+    notFound()
+  }
 
   const { data: allRatingsData } = await supabase
     .from('ratings')
