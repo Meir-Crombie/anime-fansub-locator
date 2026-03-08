@@ -55,9 +55,9 @@ export default function GroupManagerForm({ fansubName }: GroupManagerFormProps) 
 
   function togglePlatform(platform: string) {
     const current = formData.platforms ?? []
-    const next = current.includes(platform as 'website' | 'telegram' | 'discord' | 'youtube')
+    const next = current.includes(platform as 'website' | 'telegram' | 'youtube')
       ? current.filter((p) => p !== platform)
-      : [...current, platform as 'website' | 'telegram' | 'discord' | 'youtube']
+      : [...current, platform as 'website' | 'telegram' | 'youtube']
     updateField('platforms', next)
   }
 
