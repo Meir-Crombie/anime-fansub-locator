@@ -10,24 +10,26 @@ import {
 import { GENRES } from '@/lib/constants'
 
 const STATUS_OPTIONS = [
-  { value: 'ongoing', label: 'בתרגום פעיל', color: '#22c55e', icon: '⚡' },
-  { value: 'completed', label: 'הושלם', color: '#3b82f6', icon: '✓' },
-  { value: 'dropped', label: 'נזנח', color: '#ef4444', icon: '✕' },
-  { value: 'paused', label: 'מושהה', color: '#f59e0b', icon: '⏸' },
-] as const
+  { value: 'ongoing' as const, label: 'בתרגום פעיל', color: '#22c55e', icon: '⚡' },
+  { value: 'completed' as const, label: 'הושלם', color: '#3b82f6', icon: '✓' },
+  { value: 'dropped' as const, label: 'נזנח', color: '#ef4444', icon: '✕' },
+  { value: 'paused' as const, label: 'מושהה', color: '#f59e0b', icon: '⏸' },
+]
 
 const PLATFORM_OPTIONS = [
-  { value: 'website', label: 'אתר אינטרנט', icon: '🌐' },
-  { value: 'telegram', label: 'טלגרם', icon: '✈️' },
-  { value: 'youtube', label: 'יוטיוב', icon: '▶' },
-] as const
+  { value: 'website' as const, label: 'אתר אינטרנט', icon: '🌐' },
+  { value: 'telegram' as const, label: 'טלגרם', icon: '✈️' },
+  { value: 'youtube' as const, label: 'יוטיוב', icon: '▶' },
+]
 
 const QUALITY_OPTIONS = [
   { value: 'bluray', label: 'Blu-ray' },
   { value: 'web', label: 'WEB' },
   { value: 'tv', label: 'TV' },
   { value: 'dvd', label: 'DVD' },
-] as const
+]
+
+type PlatformValue = GroupManagerFormValues['platforms'][number]
 
 interface GroupManagerFormProps {
   fansubId: string
@@ -37,6 +39,7 @@ interface GroupManagerFormProps {
 export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerFormProps) {
   const [formData, setFormData] = useState<Partial<GroupManagerFormValues>>({
     platforms: [],
+    genres: [],
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -54,12 +57,20 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
     })
   }
 
-  function togglePlatform(platform: string) {
+  function togglePlatform(platform: PlatformValue) {
     const current = formData.platforms ?? []
-    const next = current.includes(platform as 'website' | 'telegram' | 'youtube')
+    const next = current.includes(platform)
       ? current.filter((p) => p !== platform)
-      : [...current, platform as 'website' | 'telegram' | 'youtube']
+      : [...current, platform]
     updateField('platforms', next)
+  }
+
+  function toggleGenre(genre: string) {
+    const current = formData.genres ?? []
+    const next = current.includes(genre)
+      ? current.filter((g) => g !== genre)
+      : [...current, genre]
+    updateField('genres', next)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -83,7 +94,13 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
     try {
       const result = await submitManagerTranslation({ ...validated.data, fansub_id: fansubId })
       if (result?.error) {
-        setErrors({ _form: 'שגיאה בשמירת הנתונים. בדוק את כל השדות.' })
+        const err = result.error
+        if (typeof err === 'object' && 'formErrors' in err) {
+          const formErrors = (err as { formErrors: string[] }).formErrors
+          setErrors({ _form: formErrors[0] ?? 'שגיאה בשמירת הנתונים.' })
+        } else {
+          setErrors({ _form: 'שגיאה בשמירת הנתונים. בדוק את כל השדות.' })
+        }
       } else {
         setIsSuccess(true)
       }
@@ -96,10 +113,7 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
 
   if (isSuccess) {
     return (
-      <div
-        dir="rtl"
-        className="min-h-screen flex items-center justify-center px-4 bg-background"
-      >
+      <div dir="rtl" className="min-h-screen flex items-center justify-center px-4 bg-background">
         <div className="text-center max-w-md w-full p-8 glass-card rounded-2xl">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
             <span className="text-3xl">✓</span>
@@ -116,10 +130,7 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
   }
 
   return (
-    <div
-      dir="rtl"
-      className="min-h-screen px-4 py-10 bg-background"
-    >
+    <div dir="rtl" className="min-h-screen px-4 py-10 bg-background">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -132,11 +143,8 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
         </div>
 
         {/* Form card */}
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-6 glass-card rounded-2xl p-8"
-        >
-          {/* Anime Name */}
+        <form onSubmit={handleSubmit} className="space-y-6 glass-card rounded-2xl p-8">
+          {/* Anime Name — required */}
           <div>
             <SectionLabel label="שם האנימה" required />
             <input
@@ -150,9 +158,9 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
             {errors.anime_name && <FieldError message={errors.anime_name} />}
           </div>
 
-          {/* Anime Name EN */}
+          {/* Anime Name EN — optional */}
           <div>
-            <SectionLabel label="שם באנגלית / רומאג'י" />
+            <SectionLabel label="שם באנגלית / רומאג'י" optional />
             <input
               type="text"
               value={formData.anime_name_en ?? ''}
@@ -163,36 +171,30 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
             />
           </div>
 
-          {/* Cover Image URL */}
+          {/* Cover Image URL — optional */}
           <div>
             <SectionLabel label="קישור לתמונת כיסוי" optional />
             <input
               type="url"
-              value={(formData as Record<string, unknown>).cover_image_url as string ?? ''}
-              onChange={(e) => updateField('cover_image_url' as keyof GroupManagerFormValues, e.target.value as never)}
+              value={formData.cover_image_url ?? ''}
+              onChange={(e) => updateField('cover_image_url', e.target.value)}
               placeholder="https://example.com/cover.jpg"
               className="form-input-base"
               style={{ direction: 'ltr', textAlign: 'left' }}
             />
           </div>
 
-          {/* Genres */}
+          {/* Genres — optional */}
           <div>
             <SectionLabel label="ז'אנרים" optional />
             <div className="flex flex-wrap gap-2">
               {GENRES.map((genre) => {
-                const selected = ((formData as Record<string, unknown>).genres as string[] ?? []).includes(genre.value)
+                const selected = (formData.genres ?? []).includes(genre.value)
                 return (
                   <button
                     key={genre.value}
                     type="button"
-                    onClick={() => {
-                      const current = ((formData as Record<string, unknown>).genres as string[]) ?? []
-                      const next = selected
-                        ? current.filter((g) => g !== genre.value)
-                        : [...current, genre.value]
-                      updateField('genres' as keyof GroupManagerFormValues, next as never)
-                    }}
+                    onClick={() => toggleGenre(genre.value)}
                     className="transition-all duration-200 cursor-pointer font-heebo"
                     style={{
                       padding: '0.35rem 0.8rem',
@@ -211,19 +213,19 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
             </div>
           </div>
 
-          {/* Credits */}
+          {/* Credits — optional */}
           <div>
             <SectionLabel label="קרדיטים" optional />
             <input
               type="text"
-              value={(formData as Record<string, unknown>).credits as string ?? ''}
-              onChange={(e) => updateField('credits' as keyof GroupManagerFormValues, e.target.value as never)}
+              value={formData.credits ?? ''}
+              onChange={(e) => updateField('credits', e.target.value)}
               placeholder="תרגום: פלוני, עריכה: אלמוני"
               className="form-input-base"
             />
           </div>
 
-          {/* Status */}
+          {/* Status — required */}
           <div>
             <SectionLabel label="סטטוס תרגום" required />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -266,14 +268,12 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
             {errors.status && <FieldError message={errors.status} />}
           </div>
 
-          {/* Platforms */}
+          {/* Platforms — required (at least 1) */}
           <div>
             <SectionLabel label="פלטפורמות" required />
             <div className="flex flex-wrap gap-2">
               {PLATFORM_OPTIONS.map((opt) => {
-                const selected = formData.platforms?.includes(
-                  opt.value as 'website' | 'telegram' | 'discord' | 'youtube'
-                )
+                const selected = (formData.platforms ?? []).includes(opt.value)
                 return (
                   <button
                     key={opt.value}
@@ -298,7 +298,7 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
             {errors.platforms && <FieldError message={errors.platforms} />}
           </div>
 
-          {/* Direct Link */}
+          {/* Direct Link — required */}
           <div>
             <SectionLabel label="קישור ישיר" required />
             <input
@@ -312,20 +312,20 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
             {errors.direct_link && <FieldError message={errors.direct_link} />}
           </div>
 
-          {/* Episode Range */}
+          {/* Episode Range — optional */}
           <div>
             <SectionLabel label="טווח פרקים" optional />
             <input
               type="text"
               value={formData.episode_range ?? ''}
               onChange={(e) => updateField('episode_range', e.target.value)}
-              placeholder='לדוגמה: 1-12'
+              placeholder="לדוגמה: 1-12"
               className="form-input-base"
               style={{ direction: 'ltr', textAlign: 'left' }}
             />
           </div>
 
-          {/* Release Date */}
+          {/* Release Date — optional */}
           <div>
             <SectionLabel label="תאריך פרסום" optional />
             <input
@@ -337,7 +337,7 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
             />
           </div>
 
-          {/* Quality */}
+          {/* Quality — optional */}
           <div>
             <SectionLabel label="איכות" optional />
             <select
@@ -354,13 +354,13 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
             </select>
           </div>
 
-          {/* Notes */}
+          {/* Notes — optional */}
           <div>
             <SectionLabel label="הערות" optional />
             <textarea
               value={formData.notes ?? ''}
               onChange={(e) => updateField('notes', e.target.value)}
-              placeholder='הערות נוספות...'
+              placeholder="הערות נוספות..."
               rows={3}
               className="form-input-base resize-none"
             />
