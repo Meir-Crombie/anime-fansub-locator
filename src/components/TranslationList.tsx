@@ -16,12 +16,13 @@ interface TranslationListProps {
   communitySubmissions?: UserSubmission[]
 }
 
+// עדכנו את הטקסטים שיהיו הרבה יותר ברורים וקריאה לפעולה
 const PLATFORM_LABELS: Record<string, string> = {
-  website: 'אתר',
-  telegram: 'טלגרם',
-  discord: 'דיסקורד',
-  youtube: 'יוטיוב',
-  other: 'אחר',
+  website: 'לצפייה באתר',
+  telegram: 'צפייה בטלגרם',
+  discord: 'צפייה בדיסקורד',
+  youtube: 'צפייה ביוטיוב',
+  other: 'קישור לצפייה',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -30,11 +31,10 @@ const STATUS_LABELS: Record<string, string> = {
   unknown: 'לא ידוע',
 }
 
-// Helper to choose the right icon based on platform
 const getPlatformIcon = (platform: string) => {
-  if (platform === 'website') return <Globe className="h-4 w-4 me-1.5" />
-  if (platform === 'telegram') return <Send className="h-4 w-4 me-1.5" />
-  return <ExternalLink className="h-4 w-4 me-1.5" />
+  if (platform === 'website') return <Globe className="h-4 w-4" />
+  if (platform === 'telegram') return <Send className="h-4 w-4" />
+  return null
 }
 
 export default function TranslationList({ translations, communitySubmissions = [] }: TranslationListProps) {
@@ -64,14 +64,13 @@ export default function TranslationList({ translations, communitySubmissions = [
     <div className="space-y-4">
       {Object.entries(grouped).map(([fansubId, fansubTranslations]) => {
         const fansub = fansubTranslations[0].fansub_groups
-        // Assuming all translations from the same fansub have the same overall status for this anime
         const generalStatus = fansubTranslations[0].status 
 
         return (
           <div key={fansubId} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border bg-card p-4 gap-4 transition-all hover:bg-accent/5">
             
-            {/* Right side: Fansub Info & Status */}
-            <div className="flex items-center gap-4">
+            {/* צד ימין: שם הפאנסאב וסטטוס */}
+            <div className="flex items-center gap-4 shrink-0">
               <Link
                 href={`/fansub/${fansubId}`}
                 className="font-semibold text-lg hover:text-primary transition-colors"
@@ -83,28 +82,34 @@ export default function TranslationList({ translations, communitySubmissions = [
               </Badge>
             </div>
 
-            {/* Left side: Buttons for different platforms */}
-            <div className="flex flex-wrap items-center gap-2">
+            {/* אמצע: הערות/פרקים - משתמש ב-flex-1 כדי לדחוף את הכפתורים שמאלה */}
+            <div className="text-sm text-muted-foreground flex-1 sm:px-4 text-start">
+               {fansubTranslations.find(t => t.notes)?.notes}
+            </div>
+
+            {/* צד שמאל: כפתורים */}
+            <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
               {fansubTranslations.map((t) => (
-                <Button key={t.id} variant="secondary" size="sm" asChild className="shrink-0">
+                <Button 
+                  key={t.id} 
+                  variant="default" 
+                  size="sm" 
+                  asChild 
+                  className="shrink-0 font-medium bg-[#0ea5e9] hover:bg-[#0284c7] text-white transition-colors"
+                >
                   <a
                     href={t.direct_link}
                     target="_blank"
                     rel="noopener noreferrer"
+                    className="flex items-center gap-2"
                   >
                     {getPlatformIcon(t.platform)}
-                    {PLATFORM_LABELS[t.platform] ?? t.platform}
+                    <span>{PLATFORM_LABELS[t.platform] ?? t.platform}</span>
+                    <ExternalLink className="h-4 w-4" /> {/* חץ ההעברה המבוקש */}
                   </a>
                 </Button>
               ))}
             </div>
-
-            {/* Show notes if any of the translations have them (Optional) */}
-            {fansubTranslations.some(t => t.notes) && (
-              <div className="w-full text-xs text-muted-foreground mt-2 sm:mt-0 sm:w-auto">
-                 {fansubTranslations.find(t => t.notes)?.notes}
-              </div>
-            )}
           </div>
         )
       })}
@@ -121,29 +126,38 @@ export default function TranslationList({ translations, communitySubmissions = [
             {communitySubmissions.map((sub) => (
               <div key={sub.id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border bg-card p-4 gap-4 transition-all hover:bg-accent/5">
                 
-                <div className="flex items-center gap-4">
+                {/* צד ימין */}
+                <div className="flex items-center gap-4 shrink-0">
                   <span className="font-semibold text-lg">{sub.translator_name}</span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">{STATUS_LABELS[sub.status] ?? sub.status}</Badge>
-                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {STATUS_LABELS[sub.status] ?? sub.status}
+                  </Badge>
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="secondary" size="sm" asChild>
+                {/* אמצע */}
+                <div className="text-sm text-muted-foreground flex-1 sm:px-4 text-start">
+                  {sub.description}
+                </div>
+
+                {/* צד שמאל */}
+                <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    asChild 
+                    className="shrink-0 font-medium bg-[#0ea5e9] hover:bg-[#0284c7] text-white transition-colors"
+                  >
                     <a
                       href={sub.translation_url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="flex items-center gap-2"
                     >
                       {getPlatformIcon(sub.platform_type)}
-                      {PLATFORM_LABELS[sub.platform_type] ?? sub.platform_type}
+                      <span>{PLATFORM_LABELS[sub.platform_type] ?? sub.platform_type}</span>
+                      <ExternalLink className="h-4 w-4" /> {/* חץ ההעברה המבוקש */}
                     </a>
                   </Button>
-                  {sub.description && (
-                    <span className="text-xs text-muted-foreground w-full sm:w-auto">
-                      {sub.description}
-                    </span>
-                  )}
                 </div>
               </div>
             ))}
