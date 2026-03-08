@@ -38,20 +38,44 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   }
 
   const supabase = createServerClient()
-  const { data, error } = await supabase.rpc('search_animes', {
+
+  // Try RPC first, fall back to ILIKE if unavailable
+  let results: SearchResult[] = []
+
+  const { data: rpcData, error: rpcError } = await supabase.rpc('search_animes', {
     search_query: query.toLowerCase(),
   })
 
-  if (error) {
-    return (
-      <main className="container mx-auto max-w-5xl px-4 py-12 text-center">
-        <h1 className="text-2xl font-bold mb-4">שגיאה בחיפוש</h1>
-        <p className="text-muted-foreground">אירעה שגיאה. נסה שוב מאוחר יותר.</p>
-      </main>
-    )
-  }
+  if (!rpcError && rpcData) {
+    results = rpcData as SearchResult[]
+  } else {
+    // Fallback: ILIKE substring search
+    const pattern = `%${query.toLowerCase()}%`
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('animes')
+      .select('id, title_he, title_en, title_romaji, cover_image_url, genres')
+      .or(`title_he.ilike.${pattern},title_en.ilike.${pattern},title_romaji.ilike.${pattern}`)
+      .limit(20)
 
-  const results = (data ?? []) as SearchResult[]
+    if (fallbackError) {
+      return (
+        <main className="container mx-auto max-w-5xl px-4 py-12 text-center">
+          <h1 className="text-2xl font-bold mb-4">שגיאה בחיפוש</h1>
+          <p className="text-muted-foreground">אירעה שגיאה. נסה שוב מאוחר יותר.</p>
+        </main>
+      )
+    }
+
+    results = (fallbackData ?? []).map((a) => ({
+      id: a.id,
+      title_he: a.title_he,
+      title_en: a.title_en,
+      title_romaji: a.title_romaji,
+      cover_image_url: a.cover_image_url,
+      genres: a.genres ?? [],
+      similarity_score: 1,
+    }))
+  }
 
   return (
     <main className="container mx-auto max-w-6xl px-4 py-12 space-y-6">

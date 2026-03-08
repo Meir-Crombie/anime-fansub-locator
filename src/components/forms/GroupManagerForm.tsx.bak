@@ -98,16 +98,34 @@ export default function GroupManagerForm({ fansubName }: GroupManagerFormProps) 
     return (
       <div
         dir="rtl"
-        className="min-h-screen flex items-center justify-center px-4 bg-background"
+        className="min-h-screen flex items-center justify-center px-4"
+        style={{
+          background: '#0a0a0f',
+          backgroundImage:
+            'radial-gradient(ellipse 80% 40% at 50% -10%, rgba(124,111,247,0.18) 0%, transparent 70%), radial-gradient(ellipse 40% 40% at 90% 80%, rgba(34,197,94,0.08) 0%, transparent 60%)',
+        }}
       >
-        <div className="text-center max-w-md w-full p-8 glass-card rounded-2xl">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
+        <div
+          className="text-center max-w-md w-full p-8"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: '20px',
+          }}
+        >
+          <div
+            className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
+            style={{ background: 'rgba(34,197,94,0.12)' }}
+          >
             <span className="text-3xl">✓</span>
           </div>
-          <h2 className="text-xl font-bold mb-2 font-space-mono text-foreground">
+          <h2
+            className="text-xl font-bold mb-2 font-space-mono"
+            style={{ color: '#e2e0f0' }}
+          >
             התרגום פורסם בהצלחה!
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm" style={{ color: '#9d99b8' }}>
             התרגום של {fansubName} זמין כעת באתר ויופיע בדף האנימה ובפרופיל הקבוצה.
           </p>
         </div>
@@ -118,15 +136,31 @@ export default function GroupManagerForm({ fansubName }: GroupManagerFormProps) 
   return (
     <div
       dir="rtl"
-      className="min-h-screen px-4 py-10 bg-background"
+      className="min-h-screen px-4 py-10"
+      style={{
+        background: '#0a0a0f',
+        backgroundImage:
+          'radial-gradient(ellipse 80% 40% at 50% -10%, rgba(124,111,247,0.18) 0%, transparent 70%), radial-gradient(ellipse 40% 40% at 90% 80%, rgba(34,197,94,0.08) 0%, transparent 60%)',
+      }}
     >
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <p className="text-xs tracking-widest mb-2 font-space-mono font-bold uppercase text-primary">
+          <p
+            className="text-xs tracking-widest mb-2 font-space-mono"
+            style={{
+              color: '#7c6ff7',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.15em',
+            }}
+          >
             {fansubName}
           </p>
-          <h1 className="text-2xl font-extrabold font-heebo text-foreground">
+          <h1
+            className="text-2xl font-bold font-heebo"
+            style={{ color: '#e2e0f0', fontWeight: 800 }}
+          >
             פרסום תרגום חדש
           </h1>
         </div>
@@ -134,7 +168,14 @@ export default function GroupManagerForm({ fansubName }: GroupManagerFormProps) 
         {/* Form card */}
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 glass-card rounded-2xl p-8"
+          className="space-y-6"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: '20px',
+            padding: '2rem',
+            backdropFilter: 'blur(10px)',
+          }}
         >
           {/* Anime Name */}
           <div>
@@ -176,7 +217,8 @@ export default function GroupManagerForm({ fansubName }: GroupManagerFormProps) 
                     onClick={() => updateField('status', opt.value)}
                     className="relative flex flex-col items-center gap-1 cursor-pointer transition-all duration-200"
                     style={{
-                      border: `1.5px solid ${selected ? opt.color : 'hsl(var(--border))'}`,
+                      ['--accent' as string]: opt.color,
+                      border: `1.5px solid ${selected ? opt.color : 'rgba(255,255,255,0.07)'}`,
                       borderRadius: '12px',
                       padding: '0.85rem 0.5rem',
                       background: selected
@@ -195,7 +237,7 @@ export default function GroupManagerForm({ fansubName }: GroupManagerFormProps) 
                     <span className="text-lg">{opt.icon}</span>
                     <span
                       className="text-xs font-medium"
-                      style={{ color: selected ? opt.color : 'hsl(var(--muted-foreground))' }}
+                      style={{ color: selected ? opt.color : '#9d99b8' }}
                     >
                       {opt.label}
                     </span>
@@ -219,15 +261,17 @@ export default function GroupManagerForm({ fansubName }: GroupManagerFormProps) 
                     key={opt.value}
                     type="button"
                     onClick={() => togglePlatform(opt.value)}
-                    className="transition-all duration-200 cursor-pointer font-heebo"
+                    className="transition-all duration-200"
                     style={{
                       padding: '0.45rem 1rem',
                       borderRadius: '999px',
-                      border: `1.5px solid ${selected ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
-                      background: selected ? 'hsl(var(--primary) / 0.15)' : 'transparent',
-                      color: selected ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
+                      border: `1.5px solid ${selected ? '#7c6ff7' : 'rgba(255,255,255,0.1)'}`,
+                      background: selected ? 'rgba(124,111,247,0.15)' : 'transparent',
+                      color: selected ? '#c4bfff' : '#9d99b8',
                       fontSize: '0.88rem',
                       fontWeight: 500,
+                      cursor: 'pointer',
+                      fontFamily: "'Heebo', sans-serif",
                     }}
                   >
                     {opt.icon} {opt.label}
@@ -313,7 +357,29 @@ export default function GroupManagerForm({ fansubName }: GroupManagerFormProps) 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl py-3 px-8 font-bold font-heebo text-base shadow-lg shadow-primary/30 hover:shadow-primary/45 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="w-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: 'linear-gradient(135deg, #7c6ff7 0%, #5a4fd4 100%)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '12px',
+              padding: '0.8rem 2rem',
+              fontWeight: 700,
+              fontFamily: "'Heebo', sans-serif",
+              fontSize: '1rem',
+              boxShadow: '0 4px 20px rgba(124,111,247,0.3)',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 8px 28px rgba(124,111,247,0.45)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(124,111,247,0.3)'
+            }}
           >
             {isSubmitting ? 'שומר...' : 'פרסם תרגום'}
           </button>
@@ -323,25 +389,25 @@ export default function GroupManagerForm({ fansubName }: GroupManagerFormProps) 
       <style jsx>{`
         .form-input-base {
           width: 100%;
-          background: hsl(var(--input));
-          border: 1.5px solid hsl(var(--border));
+          background: rgba(255, 255, 255, 0.05);
+          border: 1.5px solid rgba(255, 255, 255, 0.08);
           border-radius: 10px;
           padding: 0.75rem 1rem;
-          color: hsl(var(--foreground));
+          color: #e2e0f0;
           font-family: 'Heebo', sans-serif;
           font-size: 0.97rem;
           outline: none;
           transition: border-color 0.2s, background 0.2s;
         }
         .form-input-base:focus {
-          border-color: hsl(var(--primary));
-          background: hsl(var(--primary) / 0.06);
+          border-color: #7c6ff7;
+          background: rgba(124, 111, 247, 0.06);
         }
         .form-input-base::placeholder {
-          color: hsl(var(--muted-foreground));
+          color: #4a4760;
         }
         .form-input-error {
-          border-color: hsl(var(--destructive));
+          border-color: #ef4444;
         }
       `}</style>
     </div>
@@ -358,11 +424,29 @@ function SectionLabel({
   optional?: boolean
 }) {
   return (
-    <div className="flex items-center gap-1 mb-2 text-xs font-semibold tracking-wide uppercase text-muted-foreground font-heebo">
+    <div
+      className="flex items-center gap-1 mb-2"
+      style={{
+        fontSize: '0.82rem',
+        fontWeight: 600,
+        color: '#9d99b8',
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        fontFamily: "'Heebo', sans-serif",
+      }}
+    >
       {label}
-      {required && <span className="text-primary">*</span>}
+      {required && <span style={{ color: '#7c6ff7' }}>*</span>}
       {optional && (
-        <span className="bg-muted text-muted-foreground/70 rounded-full px-2 py-0.5 text-[0.68rem]">
+        <span
+          style={{
+            background: 'rgba(255,255,255,0.06)',
+            color: '#6b6880',
+            borderRadius: '999px',
+            padding: '2px 8px',
+            fontSize: '0.68rem',
+          }}
+        >
           אופציונלי
         </span>
       )}
@@ -372,7 +456,10 @@ function SectionLabel({
 
 function FieldError({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-1 mt-1 text-xs text-destructive">
+    <div
+      className="flex items-center gap-1 mt-1"
+      style={{ fontSize: '0.78rem', color: '#f87171' }}
+    >
       <span>⚠</span>
       <span>{message}</span>
     </div>

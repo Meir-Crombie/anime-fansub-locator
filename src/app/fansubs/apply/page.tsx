@@ -23,12 +23,21 @@ export default async function FansubApplyPage() {
     .order('sort_order')
 
   return (
-    <main className="container mx-auto max-w-lg px-4 py-8">
-      <h1 className="text-2xl font-bold mb-2">הגשת קבוצה חדשה</h1>
-      <p className="text-muted-foreground mb-6">
-        מלא את הטופס ובקשתך תיבדק על ידי הנהלת האתר
-      </p>
-      <ApplicationForm fields={(fields ?? []) as FormField[]} />
+    <main className="min-h-screen bg-background px-4 py-10">
+      <div className="max-w-lg mx-auto">
+        <div className="mb-8">
+          <p className="text-xs tracking-widest mb-2 font-space-mono font-bold uppercase text-primary">
+            הגשת קבוצה
+          </p>
+          <h1 className="text-2xl font-extrabold font-heebo text-foreground">
+            הגשת קבוצה חדשה
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm">
+            מלא את הטופס ובקשתך תיבדק על ידי הנהלת האתר
+          </p>
+        </div>
+        <ApplicationForm fields={(fields ?? []) as FormField[]} />
+      </div>
     </main>
   )
 }

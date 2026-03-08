@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import GroupManagerForm from '@/components/forms/GroupManagerForm'
+import FansubSelector from './FansubSelector'
 
 export default async function DashboardEditPage() {
   const supabase = createServerClient()
@@ -17,17 +18,35 @@ export default async function DashboardEditPage() {
     redirect('/dashboard')
   }
 
-  const { data: fansubs } = await supabase
+  // Try to find the user's own fansub group
+  const { data: ownFansubs } = await supabase
     .from('fansub_groups')
     .select('id, name')
     .eq('manager_uid', user.id)
     .limit(1)
 
-  const fansub = fansubs?.[0] ?? null
+  const ownFansub = ownFansubs?.[0] ?? null
 
-  if (!fansub) {
-    redirect('/dashboard')
+  if (ownFansub) {
+    return <GroupManagerForm fansubId={ownFansub.id} fansubName={ownFansub.name} />
   }
 
-  return <GroupManagerForm fansubId={fansub.id} fansubName={fansub.name} />
+  // Admin without own group — let them pick any active group
+  if (profile.role === 'admin' || profile.role === 'super_admin') {
+    const { data: allFansubs } = await supabase
+      .from('fansub_groups')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name')
+
+    const fansubList = (allFansubs ?? []) as { id: string; name: string }[]
+
+    if (fansubList.length === 0) {
+      redirect('/dashboard')
+    }
+
+    return <FansubSelector fansubs={fansubList} />
+  }
+
+  redirect('/dashboard')
 }

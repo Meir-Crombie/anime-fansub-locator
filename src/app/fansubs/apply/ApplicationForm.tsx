@@ -3,9 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { submitFansubApplication } from '@/actions/applications'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
 import { Loader2, CheckCircle2 } from 'lucide-react'
 import type { FormField } from '@/lib/types'
 
@@ -74,111 +71,149 @@ export default function ApplicationForm({ fields }: ApplicationFormProps) {
 
   if (isSuccess) {
     return (
-      <Card className="border-green-200 dark:border-green-800">
-        <CardContent className="py-16 text-center space-y-6">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-            <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold">הבקשה נשלחה בהצלחה!</h2>
-            <p className="text-muted-foreground leading-relaxed max-w-md mx-auto">
-              תודה שהגשת את קבוצתך לרישום באתר.
-              <br />
-              הבקשה תיבדק על ידי הנהלת האתר ונחזור אליך בהקדם.
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-            <Button onClick={() => router.push('/')}>
-              חזרה לדף הבית
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsSuccess(false)
-                setFormData({})
-              }}
-            >
-              הגשת בקשה נוספת
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="glass-card rounded-2xl py-16 text-center space-y-6 px-6">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-500/10">
+          <CheckCircle2 className="h-10 w-10 text-green-500" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-foreground font-heebo">הבקשה נשלחה בהצלחה!</h2>
+          <p className="text-muted-foreground leading-relaxed max-w-md mx-auto">
+            תודה שהגשת את קבוצתך לרישום באתר.
+            <br />
+            הבקשה תיבדק על ידי הנהלת האתר ונחזור אליך בהקדם.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+          <button
+            onClick={() => router.push('/')}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl py-2.5 px-6 font-bold font-heebo shadow-lg shadow-primary/30 transition-all duration-200 cursor-pointer"
+          >
+            חזרה לדף הבית
+          </button>
+          <button
+            onClick={() => {
+              setIsSuccess(false)
+              setFormData({})
+            }}
+            className="border border-border text-muted-foreground hover:text-foreground rounded-xl py-2.5 px-6 font-heebo transition-all duration-200 cursor-pointer"
+          >
+            הגשת בקשה נוספת
+          </button>
+        </div>
+      </div>
     )
   }
 
   if (fields.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center space-y-4">
-          <p className="text-muted-foreground">טופס ההרשמה אינו מוגדר עדיין. נסה שוב מאוחר יותר.</p>
-          <Button variant="outline" onClick={() => router.back()}>חזרה</Button>
-        </CardContent>
-      </Card>
+      <div className="glass-card rounded-2xl py-12 text-center space-y-4 px-6">
+        <p className="text-muted-foreground">טופס ההרשמה אינו מוגדר עדיין. נסה שוב מאוחר יותר.</p>
+        <button
+          onClick={() => router.back()}
+          className="border border-border text-muted-foreground hover:text-foreground rounded-xl py-2 px-6 font-heebo transition-all duration-200 cursor-pointer"
+        >
+          חזרה
+        </button>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardContent className="py-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {fields.map((field) => (
-            <div key={field.id} className="space-y-1.5">
-              <label htmlFor={field.field_key} className="text-sm font-medium">
-                {field.field_label_he}
-                {field.is_required && <span className="text-destructive ms-1">*</span>}
-              </label>
-
-              {field.field_type === 'textarea' ? (
-                <textarea
-                  id={field.field_key}
-                  value={formData[field.field_key] ?? ''}
-                  onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
-                  placeholder={field.placeholder_he ?? undefined}
-                  required={field.is_required}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] resize-y"
-                />
-              ) : field.field_type === 'select' ? (
-                <select
-                  id={field.field_key}
-                  value={formData[field.field_key] ?? ''}
-                  onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
-                  required={field.is_required}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="">בחר...</option>
-                  {(field.options as string[] | null)?.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <Input
-                  id={field.field_key}
-                  type={field.field_type === 'url' ? 'url' : field.field_type === 'email' ? 'email' : field.field_type === 'date' ? 'date' : 'text'}
-                  dir={field.field_type === 'url' || field.field_type === 'email' ? 'ltr' : 'auto'}
-                  value={formData[field.field_key] ?? ''}
-                  onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
-                  placeholder={field.placeholder_he ?? undefined}
-                  required={field.is_required}
-                />
-              )}
+    <div className="glass-card rounded-2xl p-8">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {fields.map((field) => (
+          <div key={field.id} className="space-y-1.5">
+            <div className="flex items-center gap-1 mb-2 text-xs font-semibold tracking-wide uppercase text-muted-foreground font-heebo">
+              {field.field_label_he}
+              {field.is_required && <span className="text-primary">*</span>}
             </div>
-          ))}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <div className="flex gap-3 pt-2">
-            <Button type="submit" disabled={isSubmitting} className="flex-1">
-              {isSubmitting && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
-              שלח בקשה
-            </Button>
-            <Button type="button" variant="outline" onClick={() => router.back()}>
-              ביטול
-            </Button>
+            {field.field_type === 'textarea' ? (
+              <textarea
+                id={field.field_key}
+                value={formData[field.field_key] ?? ''}
+                onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
+                placeholder={field.placeholder_he ?? undefined}
+                required={field.is_required}
+                className="app-form-input min-h-[80px] resize-y"
+              />
+            ) : field.field_type === 'select' ? (
+              <select
+                id={field.field_key}
+                value={formData[field.field_key] ?? ''}
+                onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
+                required={field.is_required}
+                className="app-form-input"
+              >
+                <option value="">בחר...</option>
+                {(field.options as string[] | null)?.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id={field.field_key}
+                type={field.field_type === 'url' ? 'url' : field.field_type === 'email' ? 'email' : field.field_type === 'date' ? 'date' : 'text'}
+                dir={field.field_type === 'url' || field.field_type === 'email' ? 'ltr' : 'auto'}
+                value={formData[field.field_key] ?? ''}
+                onChange={(e) => handleFieldChange(field.field_key, e.target.value)}
+                placeholder={field.placeholder_he ?? undefined}
+                required={field.is_required}
+                className="app-form-input"
+              />
+            )}
           </div>
-        </form>
-      </CardContent>
-    </Card>
+        ))}
+
+        {error && (
+          <div className="flex items-center gap-1 text-xs text-destructive">
+            <span>⚠</span>
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-2">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl py-3 px-8 font-bold font-heebo text-base shadow-lg shadow-primary/30 hover:shadow-primary/45 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+          >
+            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            שלח בקשה
+          </button>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="border border-border text-muted-foreground hover:text-foreground rounded-xl py-3 px-6 font-heebo transition-all duration-200 cursor-pointer"
+          >
+            ביטול
+          </button>
+        </div>
+      </form>
+
+      <style jsx>{`
+        .app-form-input {
+          width: 100%;
+          background: hsl(var(--input));
+          border: 1.5px solid hsl(var(--border));
+          border-radius: 10px;
+          padding: 0.75rem 1rem;
+          color: hsl(var(--foreground));
+          font-family: 'Heebo', sans-serif;
+          font-size: 0.97rem;
+          outline: none;
+          transition: border-color 0.2s, background 0.2s;
+        }
+        .app-form-input:focus {
+          border-color: hsl(var(--primary));
+          background: hsl(var(--primary) / 0.06);
+        }
+        .app-form-input::placeholder {
+          color: hsl(var(--muted-foreground));
+        }
+      `}</style>
+    </div>
   )
 }
