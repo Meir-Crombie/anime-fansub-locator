@@ -116,12 +116,12 @@ export default function DashboardClient({
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [isDeletingGroup, setIsDeletingGroup] = useState(false)
 
-  // Inline translation edit state
+  // Inline translation edit state (added title_en)
   const [editingTranslationId, setEditingTranslationId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({
     status: '', platform: '', direct_link: '', notes: '',
     translated_episodes: 0, total_episodes: '',
-    cover_image_url: '', genres: [] as string[], synopsis: '',
+    cover_image_url: '', genres: [] as string[], synopsis: '', title_en: '',
     credits: '', episode_range: '', quality: '',
   })
   const [isSavingTranslation, setIsSavingTranslation] = useState(false)
@@ -170,6 +170,7 @@ export default function DashboardClient({
       cover_image_url: t.animes?.cover_image_url ?? '',
       genres: t.animes?.genres ?? [],
       synopsis: t.animes?.synopsis ?? '',
+      title_en: t.animes?.title_en ?? '', // טעינת השם באנגלית
       credits,
       episode_range: episodeRange,
       quality,
@@ -203,17 +204,20 @@ export default function DashboardClient({
       translated_episodes: editForm.translated_episodes,
       total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
     })
-    // Update anime details (cover image + genres) if changed
+    // Update anime details (cover image, genres, synopsis, AND title_en) if changed
     if (currentTranslation?.animes) {
       const coverChanged = editForm.cover_image_url !== (currentTranslation.animes.cover_image_url ?? '')
       const genresChanged = JSON.stringify(editForm.genres) !== JSON.stringify(currentTranslation.animes.genres ?? [])
       const synopsisChanged = editForm.synopsis !== (currentTranslation.animes.synopsis ?? '')
-      if (coverChanged || genresChanged || synopsisChanged) {
+      const titleEnChanged = editForm.title_en !== (currentTranslation.animes.title_en ?? '')
+      
+      if (coverChanged || genresChanged || synopsisChanged || titleEnChanged) {
         await updateAnimeDetails({
           anime_id: currentTranslation.animes.id,
           cover_image_url: editForm.cover_image_url,
           genres: editForm.genres,
           synopsis: editForm.synopsis,
+          title_en: editForm.title_en, // שליחת השם המעודכן לפונקציה השרתית
         })
       }
     }
@@ -232,7 +236,13 @@ export default function DashboardClient({
                   translated_episodes: editForm.translated_episodes,
                   total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
                 }],
-                animes: t.animes ? { ...t.animes, cover_image_url: editForm.cover_image_url || null, genres: editForm.genres, synopsis: editForm.synopsis || null } : null,
+                animes: t.animes ? { 
+                  ...t.animes, 
+                  cover_image_url: editForm.cover_image_url || null, 
+                  genres: editForm.genres, 
+                  synopsis: editForm.synopsis || null,
+                  title_en: editForm.title_en || t.animes.title_en // עדכון בתצוגה באופן מיידי
+                } : null,
               }
             : t
         ),
@@ -541,6 +551,16 @@ export default function DashboardClient({
                     {/* Inline edit form */}
                     {isEditing && (
                       <div className="mt-3 pt-3 border-t space-y-3">
+                        {/* Title_en (התוספת החדשה) */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium">שם באנגלית</label>
+                          <Input
+                            dir="ltr"
+                            value={editForm.title_en}
+                            onChange={(e) => setEditForm((p) => ({ ...p, title_en: e.target.value }))}
+                            placeholder="לדוגמה: Naruto"
+                          />
+                        </div>
                         {/* Synopsis */}
                         <div className="space-y-1">
                           <label className="text-xs font-medium">תיאור</label>

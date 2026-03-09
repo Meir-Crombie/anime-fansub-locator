@@ -21,10 +21,11 @@ export default async function AnimesPage({ searchParams }: AnimesPageProps) {
   const genre = searchParams.genre?.trim() ?? ''
   const length = searchParams.length?.trim() ?? ''
 
-  let dbQuery = supabase
+let dbQuery = supabase
     .from('animes')
     .select('id, title_he, title_en, cover_image_url, genres, synopsis')
-    .order('created_at', { ascending: false })
+    .order('title_he', { ascending: true }) // מיון ראשי: לפי א-ב (מההתחלה לסוף)
+    .order('created_at', { ascending: false }) // מיון משני: במקרה של שם זהה, מהחדש לישן
 
   // Apply search filter
   if (query.length >= 2) {
