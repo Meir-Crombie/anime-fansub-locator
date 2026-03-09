@@ -237,7 +237,7 @@ export default function SearchBar() {
           onChange={(e) => handleInput(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setIsOpen(true)}
-          placeholder={mode === 'anime' ? 'חפש אנימה בעברית, אנגלית או ביפנית...' : 'חפש קבוצת פאנסאב...'}
+          placeholder={mode === 'anime' ? '...חפש אנימה בעברית, אנגלית או ביפנית' : 'חפש קבוצת פאנסאב...'}
           aria-label={mode === 'anime' ? 'חיפוש אנימה' : 'חיפוש קבוצת פאנסאב'}
           className="w-full rounded-2xl border border-border bg-card/80 pe-12 ps-5 py-4 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 backdrop-blur-sm"
         />
