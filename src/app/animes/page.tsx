@@ -38,8 +38,8 @@ let dbQuery = supabase
   // Apply genre filter
   if (genre) {
     const genres = genre.split(',').filter(Boolean)
-    for (const g of genres) {
-      dbQuery = dbQuery.contains('genres', [g])
+    if (genres.length > 0) {
+      dbQuery = dbQuery.contains('genres', genres) // Passes the array at once
     }
   }
 
