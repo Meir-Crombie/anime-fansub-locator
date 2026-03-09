@@ -157,50 +157,62 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
   // Verify that the user can write to this fansub
   await verifyManager(supabase, fansubId, user.id)
 
-  // Use the anime_id selected from autocomplete — verify it exists
-  const { data: existing } = await supabase
-    .from('animes')
-    .select('id')
-    .eq('id', parsed.data.anime_id)
-    .maybeSingle()
+  let animeId = parsed.data.anime_id
 
-  if (!existing) {
-    return {
-      error: {
-        formErrors: [],
-        fieldErrors: {
-          anime_name: ['האנימה לא נמצאה במאגר. יש לבחור אנימה קיימת מהרשימה.'],
-        },
-      },
-    }
+  // If other details like cover, genres, or english name are provided, prepare the anime data
+  const { cover_image_url, genres, anime_name_en, anime_name } = parsed.data
+  const animeData: Record<string, any> = {}
+
+  if (anime_name) {
+    animeData.title_he = anime_name
   }
-
-  const animeId = existing.id
-
-  // If other details like cover, genres, or english name are provided, update the anime
-  const { cover_image_url, genres, anime_name_en } = parsed.data
-  const animeUpdates: Record<string, any> = {}
-
   if (cover_image_url !== undefined) {
-    animeUpdates.cover_image_url = cover_image_url || null
+    animeData.cover_image_url = cover_image_url || null
   }
   if (genres !== undefined && genres.length > 0) {
-    animeUpdates.genres = genres
+    animeData.genres = genres
   }
   if (anime_name_en !== undefined) {
-    animeUpdates.title_en = anime_name_en || null
+    animeData.title_en = anime_name_en || null
   }
 
-  if (Object.keys(animeUpdates).length > 0) {
-    const { error: animeUpdateError } = await supabase
+  if (!animeId) {
+    // Insert new anime
+    const { data: newAnime, error: insertError } = await supabase
       .from('animes')
-      .update(animeUpdates)
-      .eq('id', animeId)
-      .select()
+      .insert({
+        title_he: anime_name,
+        title_en: animeData.title_en ?? '', // title_en is required by DB schema
+        ...animeData,
+        // Since the manager provides it, we can assume it's approved immediately, or it needs manual logic.
+        // Assuming we just insert directly for now.
+      })
+      .select('id')
+      .single()
 
-    if (animeUpdateError) {
-      console.error('Error updating anime details:', animeUpdateError)
-      // Non-critical, so we don't block the translation submission
+    if (insertError) {
+      console.error('Error creating new anime:', insertError)
+      return {
+        error: {
+          formErrors: ['שגיאה ביצירת נתוני האנימה. נסה שוב.'],
+          fieldErrors: {},
+        },
+      }
+    }
+    animeId = newAnime.id
+  } else {
+    // Update existing anime
+    if (Object.keys(animeData).length > 0) {
+      const { error: animeUpdateError } = await supabase
+        .from('animes')
+        .update(animeData)
+        .eq('id', animeId)
+        .select()
+
+      if (animeUpdateError) {
+        console.error('Error updating anime details:', animeUpdateError)
+        // Non-critical, so we don't block the translation submission
+      }
     }
   }
 

@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 // ── GroupManagerForm schema ──────────────────────────────────────────
 export const groupManagerFormSchema = z.object({
-  anime_id: z.string().uuid('יש לבחור אנימה מהרשימה'),
+  anime_id: z.string().uuid().optional(),
   anime_name: z.string().min(1, 'יש להזין שם אנימה').max(255),
   anime_name_en: z.string().max(255).optional(),
   cover_image_url: z.string().url('קישור תמונה לא תקין').max(512).optional().or(z.literal('')),

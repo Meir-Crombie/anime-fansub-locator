@@ -97,16 +97,23 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
 
   function handleAnimeQueryChange(value: string) {
     setAnimeQuery(value)
+    
+    // Always store what they are typing so they can create a new anime
+    setFormData((prev) => ({
+      ...prev,
+      anime_name: value,
+    }))
+    
     // Clear selection if user edits after selecting
     if (selectedAnime) {
       setSelectedAnime(null)
       setFormData((prev) => {
         const next = { ...prev }
         delete next.anime_id
-        delete next.anime_name
         return next
       })
     }
+    
     setErrors((prev) => {
       const next = { ...prev }
       delete next.anime_name
@@ -168,9 +175,9 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
     e.preventDefault()
     setErrors({})
 
-    // Block submission if no anime selected from autocomplete
-    if (!selectedAnime || !formData.anime_id) {
-      setErrors({ anime_name: 'יש לבחור אנימה מהרשימה' })
+    // Block submission if no anime selected OR no text typed
+    if (!formData.anime_name || formData.anime_name.trim() === '') {
+      setErrors({ anime_name: 'יש לבחור או להקליד שם אנימה' })
       return
     }
 
@@ -282,7 +289,7 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
                   ))
                 ) : (
                   <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-                    האנימה לא נמצאה. יש לפנות לאדמין להוספה.
+                    האנימה לא נמצאה. אפשר להמשיך להקליד והיא תיווצר אוטומטית בעת השמירה.
                   </div>
                 )}
               </div>
@@ -292,20 +299,18 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
             )}
           </div>
 
-          {/* English Name - shown after selection */}
-          {selectedAnime && (
-            <div>
-              <SectionLabel label="שם באנגלית" optional />
-              <input
-                type="text"
-                value={formData.anime_name_en ?? ''}
-                onChange={(e) => updateField('anime_name_en', e.target.value)}
-                placeholder="English Name"
+          {/* English Name - always shown now so they can add it for new animes too */}
+          <div>
+            <SectionLabel label="שם באנגלית" optional />
+            <input
+              type="text"
+              value={formData.anime_name_en ?? ''}
+              onChange={(e) => updateField('anime_name_en', e.target.value)}
+              placeholder="English Name"
                 className="form-input-base"
                 style={{ direction: 'ltr', textAlign: 'left' }}
               />
-            </div>
-          )}
+          </div>
 
           {/* Cover Image — upload */}
           <div>
