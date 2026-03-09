@@ -82,14 +82,16 @@ export async function deleteAnime(id: string) {
   return { error: null }
 }
 
+
 const updateAnimeDetailsSchema = z.object({
   anime_id: z.string().uuid(),
   cover_image_url: z.string().url().max(512).optional().or(z.literal('')),
   genres: z.array(z.string()).optional(),
   synopsis: z.string().max(2000).optional(),
+  title_en: z.string().max(255).optional(),
 })
 
-export async function updateAnimeDetails(data: { anime_id: string; cover_image_url?: string; genres?: string[]; synopsis?: string }) {
+export async function updateAnimeDetails(data: { anime_id: string; cover_image_url?: string; genres?: string[]; synopsis?: string; title_en?: string }) {
   const parsed = updateAnimeDetailsSchema.safeParse(data)
   if (!parsed.success) return { error: 'נתונים לא תקינים' }
 
@@ -106,6 +108,9 @@ export async function updateAnimeDetails(data: { anime_id: string; cover_image_u
   }
   if (parsed.data.synopsis !== undefined) {
     updates.synopsis = parsed.data.synopsis || null
+  }
+  if (parsed.data.title_en !== undefined) {
+    updates.title_en = parsed.data.title_en
   }
 
   if (Object.keys(updates).length === 0) return { error: null }
