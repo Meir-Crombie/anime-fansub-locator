@@ -194,69 +194,84 @@ export default function DashboardClient({
     setIsSavingTranslation(true)
     const currentTranslation = translations.find((t) => t.id === editingTranslationId)
 
-    // Build combined notes from structured fields
-    const notesParts: string[] = []
-    if (editForm.episode_range) notesParts.push(`פרקים: ${editForm.episode_range}`)
-    if (editForm.quality) notesParts.push(`איכות: ${editForm.quality}`)
-    if (editForm.credits) notesParts.push(`קרדיטים: ${editForm.credits}`)
-    if (editForm.notes) notesParts.push(editForm.notes)
-    const combinedNotes = notesParts.length > 0 ? notesParts.join(' | ') : null
+    try {
+      // Build combined notes from structured fields
+      const notesParts: string[] = []
+      if (editForm.episode_range) notesParts.push(`פרקים: ${editForm.episode_range}`)
+      if (editForm.quality) notesParts.push(`איכות: ${editForm.quality}`)
+      if (editForm.credits) notesParts.push(`קרדיטים: ${editForm.credits}`)
+      if (editForm.notes) notesParts.push(editForm.notes)
+      const combinedNotes = notesParts.length > 0 ? notesParts.join(' | ') : null
 
-    const result = await updateTranslation({
-      id: editingTranslationId,
-      status: editForm.status,
-      platform: editForm.platform,
-      direct_link: editForm.direct_link,
-      notes: combinedNotes,
-    })
-    // Also update episode progress
-    const totalEp = editForm.total_episodes ? parseInt(editForm.total_episodes, 10) : null
-    await updateEpisodeProgress({
-      translation_id: editingTranslationId,
-      translated_episodes: editForm.translated_episodes,
-      total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
-    })
-    // Update anime details (cover image, genres, synopsis, AND title_en) if changed
-    if (currentTranslation?.animes) {
-      const coverChanged = editForm.cover_image_url !== (currentTranslation.animes.cover_image_url ?? '')
-      const genresChanged = JSON.stringify(editForm.genres) !== JSON.stringify(currentTranslation.animes.genres ?? [])
-      const synopsisChanged = editForm.synopsis !== (currentTranslation.animes.synopsis ?? '')
-      const titleEnChanged = editForm.title_en !== (currentTranslation.animes.title_en ?? '')
-      
-      if (coverChanged || genresChanged || synopsisChanged || titleEnChanged) {
-        const animeResult = await updateAnimeDetails({
-          anime_id: currentTranslation.animes.id,
-          cover_image_url: editForm.cover_image_url,
-          genres: editForm.genres,
-          synopsis: editForm.synopsis,
-          title_en: editForm.title_en,
-        })
-        if (animeResult.error) {
-          console.error('Failed to update anime details:', animeResult.error)
+      const result = await updateTranslation({
+        id: editingTranslationId,
+        status: editForm.status,
+        platform: editForm.platform,
+        direct_link: editForm.direct_link,
+        notes: combinedNotes,
+      })
+      if (result.error) {
+        console.error('Translation update error:', result.error)
+      }
+
+      // Also update episode progress
+      const totalEp = editForm.total_episodes ? parseInt(editForm.total_episodes, 10) : null
+      await updateEpisodeProgress({
+        translation_id: editingTranslationId,
+        translated_episodes: editForm.translated_episodes,
+        total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
+      })
+
+      // Update anime details (cover image, genres, synopsis, AND title_en) if changed
+      let animeUpdated = false
+      if (currentTranslation?.animes) {
+        const coverChanged = editForm.cover_image_url !== (currentTranslation.animes.cover_image_url ?? '')
+        const genresChanged = JSON.stringify(editForm.genres) !== JSON.stringify(currentTranslation.animes.genres ?? [])
+        const synopsisChanged = editForm.synopsis !== (currentTranslation.animes.synopsis ?? '')
+        const titleEnChanged = editForm.title_en !== (currentTranslation.animes.title_en ?? '')
+        
+        if (coverChanged || genresChanged || synopsisChanged || titleEnChanged) {
+          const animeResult = await updateAnimeDetails({
+            anime_id: currentTranslation.animes.id,
+            cover_image_url: editForm.cover_image_url,
+            genres: editForm.genres,
+            synopsis: editForm.synopsis,
+            title_en: editForm.title_en,
+          })
+          if (animeResult.error) {
+            console.error('Failed to update anime details:', animeResult.error)
+          } else {
+            animeUpdated = true
+          }
         }
       }
-    }
-    if (!result.error) {
+
+      // Update local state — translation fields update if translation save succeeded,
+      // anime fields update if anime save succeeded
       setTranslationsMap((prev) => ({
         ...prev,
         [selectedGroupId]: prev[selectedGroupId].map((t) =>
           t.id === editingTranslationId
             ? {
                 ...t,
-                status: editForm.status as TranslationRow['status'],
-                platform: editForm.platform as TranslationRow['platform'],
-                direct_link: editForm.direct_link,
-                notes: combinedNotes,
-                episode_progress: [{
-                  translated_episodes: editForm.translated_episodes,
-                  total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
-                }],
+                ...(!result.error ? {
+                  status: editForm.status as TranslationRow['status'],
+                  platform: editForm.platform as TranslationRow['platform'],
+                  direct_link: editForm.direct_link,
+                  notes: combinedNotes,
+                  episode_progress: [{
+                    translated_episodes: editForm.translated_episodes,
+                    total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
+                  }],
+                } : {}),
                 animes: t.animes ? { 
                   ...t.animes, 
-                  cover_image_url: editForm.cover_image_url || null, 
-                  genres: editForm.genres, 
-                  synopsis: editForm.synopsis || null,
-                  title_en: editForm.title_en,
+                  ...(animeUpdated ? {
+                    cover_image_url: editForm.cover_image_url || null, 
+                    genres: editForm.genres, 
+                    synopsis: editForm.synopsis || null,
+                    title_en: editForm.title_en,
+                  } : {}),
                 } : null,
               }
             : t
@@ -264,6 +279,8 @@ export default function DashboardClient({
       }))
       setEditingTranslationId(null)
       router.refresh()
+    } catch (err) {
+      console.error('Save error:', err)
     }
     setIsSavingTranslation(false)
   }
