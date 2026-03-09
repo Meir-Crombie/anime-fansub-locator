@@ -159,6 +159,19 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
 
   let animeId = parsed.data.anime_id
 
+  if (!animeId && parsed.data.anime_name) {
+    // Check if an anime with the exact same Hebrew name already exists
+    const { data: nameExisting } = await supabase
+      .from('animes')
+      .select('id')
+      .eq('title_he', parsed.data.anime_name.trim())
+      .maybeSingle()
+
+    if (nameExisting) {
+      animeId = nameExisting.id
+    }
+  }
+
   // If other details like cover, genres, or english name are provided, prepare the anime data
   const { cover_image_url, genres, anime_name_en, anime_name } = parsed.data
   const animeData: Record<string, any> = {}
@@ -229,22 +242,24 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
   const dbStatus = parsed.data.status === 'paused' ? 'dropped' : parsed.data.status
   const validStatus = dbStatus as 'ongoing' | 'completed' | 'dropped'
 
-  // Map platform — use primary platform
-  const primaryPlatform = parsed.data.platforms[0]
+  // Upsert a record for each selected platform
+  const upsertPromises = parsed.data.platforms.map((platform) => {
+    return supabase
+      .from('translations')
+      .upsert({
+        anime_id: animeId,
+        fansub_id: fansubId,
+        status: validStatus,
+        platform: platform,
+        direct_link: parsed.data.direct_link,
+        notes: combinedNotes,
+      }, {
+        onConflict: 'anime_id,fansub_id,platform',
+      })
+  })
 
-  const { error: translationError } = await supabase
-    .from('translations')
-    .upsert({
-      anime_id: animeId,
-      fansub_id: fansubId,
-      status: validStatus,
-      platform: primaryPlatform,
-      direct_link: parsed.data.direct_link,
-      notes: combinedNotes,
-    }, {
-      onConflict: 'anime_id,fansub_id,platform',
-    })
-
+  const results = await Promise.all(upsertPromises)
+  const translationError = results.find(r => r.error)?.error
   if (translationError) throw new Error(translationError.message)
 
   revalidatePath(`/anime/${animeId}`)
