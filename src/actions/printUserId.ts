@@ -17,7 +17,7 @@ export async function printUserId() {
 // Server Action: check is_admin() for current session
 export async function checkIsAdminSession() {
   const supabase = createServerClient();
-  const { data, error } = await supabase.rpc('is_admin');
+  const { data, error } = await (supabase as any).rpc('is_admin');
   if (error) {
     console.error('is_admin() error:', error);
     return { error: error.message };

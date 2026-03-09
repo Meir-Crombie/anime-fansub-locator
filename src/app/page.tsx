@@ -5,7 +5,7 @@ import SearchBar from '@/components/SearchBar'
 import SmartRandomizer from '@/components/SmartRandomizer'
 import AnimeGrid from '@/components/AnimeGrid'
 import type { AnimeCardData } from '@/components/AnimeCard'
-import { printUserId } from '@/actions/printUserId'
+import { printUserId, checkIsAdminSession } from '@/actions/printUserId'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,11 +14,15 @@ export default async function HomePage() {
 
   // Debug: get user id from server action
   let userId = null
+  let isAdminSession = null
   try {
     const res = await printUserId()
     userId = res?.userId || null
+    const adminRes = await checkIsAdminSession()
+    isAdminSession = adminRes?.isAdmin ?? null
   } catch (e) {
     userId = 'ERROR'
+    isAdminSession = 'ERROR'
   }
 
   // Fetch counts and recent animes in parallel
@@ -39,8 +43,9 @@ export default async function HomePage() {
   return (
     <main className="flex min-h-[calc(100vh-4rem)] flex-col items-center px-4 py-12">
       {/* Debug: Show user id */}
-      <div className="fixed top-2 left-2 bg-muted px-3 py-1 rounded text-xs z-50">
+      <div className="fixed top-2 left-2 bg-muted px-3 py-1 rounded text-xs z-50 space-x-2 rtl:space-x-reverse flex items-center">
         <span>user id: {userId || 'לא מחובר'}</span>
+        <span>| is_admin(): {String(isAdminSession)}</span>
       </div>
       {/* Hero Section */}
       <section className="w-full max-w-4xl text-center space-y-8 relative">
