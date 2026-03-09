@@ -528,7 +528,7 @@ export default function DashboardClient({
                     <div className="flex flex-wrap items-center gap-3">
                       <div className="relative h-10 w-8 flex-shrink-0 overflow-hidden rounded bg-muted">
                         {t.animes.cover_image_url ? (
-                          <Image src={t.animes.cover_image_url} alt={t.animes.title_he} fill sizes="32px" className="object-cover" />
+                          <Image src={t.animes.cover_image_url} alt={t.animes.title_he} fill sizes="32px" className="object-cover" unoptimized />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-[8px]">🎬</div>
                         )}
