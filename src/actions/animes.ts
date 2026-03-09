@@ -57,7 +57,7 @@ export async function updateAnime(formData: FormData) {
   if (!parsed.success) return { error: parsed.error.flatten() }
 
   const { id, ...data } = parsed.data
-  const { error } = await supabase.from('animes').update(data).eq('id', id)
+  const { error } = await supabase.from('animes').update(data).eq('id', id).select()
   if (error) throw new Error(error.message)
 
   revalidatePath('/')
@@ -119,11 +119,16 @@ export async function updateAnimeDetails(data: { anime_id: string; cover_image_u
     .from('animes')
     .update(updates)
     .eq('id', parsed.data.anime_id)
+    .select()
 
-  if (error) return { error: error.message }
+  if (error) {
+    console.error('Supabase updateAnimeDetails error:', error)
+    return { error: error.message }
+  }
 
   revalidatePath(`/anime/${parsed.data.anime_id}`)
   revalidatePath('/')
   revalidatePath('/dashboard')
+  revalidatePath('/admin/animes')
   return { error: null }
 }
