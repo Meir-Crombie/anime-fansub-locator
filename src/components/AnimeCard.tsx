@@ -1,6 +1,9 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
+import { GENRES } from '@/lib/constants'
+
+const genreLabelMap = Object.fromEntries(GENRES.map((g) => [g.value, g.label]))
 
 export interface AnimeCardData {
   id: string
@@ -62,7 +65,7 @@ export default function AnimeCard({ anime }: AnimeCardProps) {
           <div className="flex flex-wrap gap-1 pt-1">
             {displayGenres.map((genre) => (
               <Badge key={genre} variant="secondary" className="text-[10px] px-1.5 py-0">
-                {genre}
+                {genreLabelMap[genre] ?? genre}
               </Badge>
             ))}
             {extraGenres > 0 && (

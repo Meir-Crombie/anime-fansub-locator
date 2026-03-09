@@ -5,8 +5,11 @@ import EmptyState from '@/components/EmptyState'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
+import { GENRES } from '@/lib/constants'
 import DeleteAnimeButton from './DeleteAnimeButton'
 import DeleteTranslationButton from './DeleteTranslationButton'
+
+const genreLabelMap = Object.fromEntries(GENRES.map((g) => [g.value, g.label]))
 
 export const dynamic = 'force-dynamic'
 
@@ -89,7 +92,7 @@ export default async function AdminAnimesPage() {
               </CardHeader>
               <CardContent className="py-2 space-y-2">
                 <div className="text-xs text-muted-foreground">
-                  {anime.genres?.join(', ') || 'ללא ז׳אנרים'}
+                  {anime.genres?.map((g) => genreLabelMap[g] ?? g).join(', ') || 'ללא ז׳אנרים'}
                 </div>
                 {anime.translations.length > 0 && (
                   <div className="border-t pt-2 space-y-1">
