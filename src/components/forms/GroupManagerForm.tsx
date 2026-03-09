@@ -292,6 +292,21 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
             )}
           </div>
 
+          {/* English Name - shown after selection */}
+          {selectedAnime && (
+            <div>
+              <SectionLabel label="שם באנגלית" optional />
+              <input
+                type="text"
+                value={formData.anime_name_en ?? ''}
+                onChange={(e) => updateField('anime_name_en', e.target.value)}
+                placeholder="English Name"
+                className="form-input-base"
+                style={{ direction: 'ltr', textAlign: 'left' }}
+              />
+            </div>
+          )}
+
           {/* Cover Image — upload */}
           <div>
             <SectionLabel label="תמונת כיסוי" optional />

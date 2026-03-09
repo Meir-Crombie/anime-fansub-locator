@@ -177,6 +177,32 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
 
   const animeId = existing.id
 
+  // If other details like cover, genres, or english name are provided, update the anime
+  const { cover_image_url, genres, anime_name_en } = parsed.data
+  const animeUpdates: Record<string, any> = {}
+
+  if (cover_image_url !== undefined) {
+    animeUpdates.cover_image_url = cover_image_url || null
+  }
+  if (genres !== undefined && genres.length > 0) {
+    animeUpdates.genres = genres
+  }
+  if (anime_name_en !== undefined) {
+    animeUpdates.title_en = anime_name_en || null
+  }
+
+  if (Object.keys(animeUpdates).length > 0) {
+    const { error: animeUpdateError } = await supabase
+      .from('animes')
+      .update(animeUpdates)
+      .eq('id', animeId)
+
+    if (animeUpdateError) {
+      console.error('Error updating anime details:', animeUpdateError)
+      // Non-critical, so we don't block the translation submission
+    }
+  }
+
   // Build notes from optional fields
   const notesParts: string[] = []
   if (parsed.data.episode_range) notesParts.push(`פרקים: ${parsed.data.episode_range}`)

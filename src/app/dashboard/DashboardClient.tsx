@@ -253,7 +253,7 @@ export default function DashboardClient({
                   cover_image_url: editForm.cover_image_url || null, 
                   genres: editForm.genres, 
                   synopsis: editForm.synopsis || null,
-                  title_en: editForm.title_en || t.animes.title_en // עדכון בתצוגה באופן מיידי
+                  title_en: editForm.title_en // עדכון בתצוגה באופן מיידי
                 } : null,
               }
             : t
