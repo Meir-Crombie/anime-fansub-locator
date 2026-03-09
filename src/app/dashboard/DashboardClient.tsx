@@ -217,7 +217,6 @@ export default function DashboardClient({
       total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
     })
     // Update anime details (cover image, genres, synopsis, AND title_en) if changed
-    let animeUpdateSuccess = true
     if (currentTranslation?.animes) {
       const coverChanged = editForm.cover_image_url !== (currentTranslation.animes.cover_image_url ?? '')
       const genresChanged = JSON.stringify(editForm.genres) !== JSON.stringify(currentTranslation.animes.genres ?? [])
@@ -234,7 +233,6 @@ export default function DashboardClient({
         })
         if (animeResult.error) {
           console.error('Failed to update anime details:', animeResult.error)
-          animeUpdateSuccess = false
         }
       }
     }
@@ -255,19 +253,17 @@ export default function DashboardClient({
                 }],
                 animes: t.animes ? { 
                   ...t.animes, 
-                  // Only update anime fields in local state if the server save succeeded
-                  ...(animeUpdateSuccess ? {
-                    cover_image_url: editForm.cover_image_url || null, 
-                    genres: editForm.genres, 
-                    synopsis: editForm.synopsis || null,
-                    title_en: editForm.title_en,
-                  } : {}),
+                  cover_image_url: editForm.cover_image_url || null, 
+                  genres: editForm.genres, 
+                  synopsis: editForm.synopsis || null,
+                  title_en: editForm.title_en,
                 } : null,
               }
             : t
         ),
       }))
       setEditingTranslationId(null)
+      router.refresh()
     }
     setIsSavingTranslation(false)
   }
