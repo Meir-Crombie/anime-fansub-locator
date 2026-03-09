@@ -88,7 +88,7 @@ const updateAnimeDetailsSchema = z.object({
   cover_image_url: z.string().url().max(512).optional().or(z.literal('')),
   genres: z.array(z.string()).optional(),
   synopsis: z.string().max(2000).optional(),
-  title_en: z.string().max(255).optional(),
+  title_en: z.string().max(255).optional().or(z.literal('')),
 })
 
 export async function updateAnimeDetails(data: { anime_id: string; cover_image_url?: string; genres?: string[]; synopsis?: string; title_en?: string }) {
@@ -110,7 +110,7 @@ export async function updateAnimeDetails(data: { anime_id: string; cover_image_u
     updates.synopsis = parsed.data.synopsis || null
   }
   if (parsed.data.title_en !== undefined) {
-    updates.title_en = parsed.data.title_en
+    updates.title_en = parsed.data.title_en || null
   }
 
   if (Object.keys(updates).length === 0) return { error: null }

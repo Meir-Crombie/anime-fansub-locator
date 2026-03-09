@@ -107,8 +107,20 @@ export default function DashboardClient({
     Object.fromEntries(Object.entries(groupDataMap).map(([id, d]) => [id, d.announcements]))
   )
 
+  const [searchQuery, setSearchQuery] = useState('')
+
   const translations = translationsMap[selectedGroupId] ?? []
   const announcements = announcementsMap[selectedGroupId] ?? []
+
+  const filteredTranslations = useMemo(() => {
+    if (!searchQuery) return translations
+    return translations.filter(t => {
+      const hebrewName = t.animes?.title_he?.toLowerCase() || ''
+      const englishName = t.animes?.title_en?.toLowerCase() || ''
+      const query = searchQuery.toLowerCase()
+      return hebrewName.includes(query) || englishName.includes(query)
+    })
+  }, [translations, searchQuery])
 
   const [isEditingGroup, setIsEditingGroup] = useState(false)
   const [isSavingGroup, setIsSavingGroup] = useState(false)
@@ -485,8 +497,15 @@ export default function DashboardClient({
 
       {/* Section 2: Translations */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">תרגומים ({translations.length})</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold">תרגומים ({filteredTranslations.length})</h2>
+          <div className="flex-1 min-w-[200px] max-w-sm">
+            <Input
+              placeholder="חיפוש לפי שם האנימה..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           <Button asChild>
             <Link href="/dashboard/edit">
               <Plus className="h-4 w-4 me-2" aria-hidden />
@@ -495,11 +514,11 @@ export default function DashboardClient({
           </Button>
         </div>
 
-        {translations.length === 0 ? (
-          <EmptyState message="עדיין לא הוספת תרגומים. לחץ על 'תרגום חדש' כדי להתחיל." />
+        {filteredTranslations.length === 0 ? (
+          <EmptyState message={searchQuery ? `לא נמצאו תרגומים התואמים לחיפוש "${searchQuery}".` : "עדיין לא הוספת תרגומים. לחץ על 'תרגום חדש' כדי להתחיל."} />
         ) : (
           <div className="space-y-2">
-            {translations.map((t) => {
+            {filteredTranslations.map((t) => {
               if (!t.animes) return null
               const progress = t.episode_progress?.[0]
               const isEditing = editingTranslationId === t.id
