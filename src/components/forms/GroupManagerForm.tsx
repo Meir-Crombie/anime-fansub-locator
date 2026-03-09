@@ -1,5 +1,5 @@
 // PlatformValue removed, use TranslationValue
-                  next.push({ platform: 'website', direct_link: '', secondary_link: '' })
+next.push({ platform: 'website', direct_link: '', secondary_link: '' })
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -103,13 +103,13 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
 
   function handleAnimeQueryChange(value: string) {
     setAnimeQuery(value)
-    
+
     // Always store what they are typing so they can create a new anime
     setFormData((prev) => ({
       ...prev,
       anime_name: value,
     }))
-    
+
     // Clear selection if user edits after selecting
     if (selectedAnime) {
       setSelectedAnime(null)
@@ -119,7 +119,7 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
         return next
       })
     }
-    
+
     setErrors((prev) => {
       const next = { ...prev }
       delete next.anime_name
@@ -309,9 +309,9 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
               value={formData.anime_name_en ?? ''}
               onChange={(e) => updateField('anime_name_en', e.target.value)}
               placeholder="English Name"
-                className="form-input-base"
-                style={{ direction: 'ltr', textAlign: 'left' }}
-              />
+              className="form-input-base"
+              style={{ direction: 'ltr', textAlign: 'left' }}
+            />
           </div>
 
           {/* Cover Image — upload */}
