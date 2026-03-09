@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServerClient()
-  const pattern = `%${parsed.data.query.toLowerCase().trim()}%`
+  const pattern = `%${parsed.data.query.trim()}%`
 
   const { data, error } = await supabase
     .from('fansub_groups')

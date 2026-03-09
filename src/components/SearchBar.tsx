@@ -276,6 +276,7 @@ export default function SearchBar() {
                               fill
                               sizes="28px"
                               className="object-cover"
+                              unoptimized
                             />
                           ) : (
                             <div className="h-full w-full bg-muted" />
@@ -300,6 +301,7 @@ export default function SearchBar() {
                               fill
                               sizes="32px"
                               className="object-cover"
+                              unoptimized
                             />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center">

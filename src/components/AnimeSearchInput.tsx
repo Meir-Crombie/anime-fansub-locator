@@ -127,6 +127,7 @@ export default function AnimeSearchInput({
                       fill
                       sizes="24px"
                       className="object-cover"
+                      unoptimized
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-[6px]">🎬</div>
@@ -156,6 +157,7 @@ export default function AnimeSearchInput({
                     fill
                     sizes="24px"
                     className="object-cover"
+                    unoptimized
                   />
                 ) : null}
               </div>

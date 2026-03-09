@@ -40,7 +40,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   }
 
   const supabase = createServerClient()
-  const pattern = `%${query.toLowerCase()}%`
+  const pattern = `%${query}%`
 
   const { data, error } = await supabase
     .from('animes')
