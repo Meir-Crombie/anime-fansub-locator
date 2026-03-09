@@ -196,6 +196,7 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
       .from('animes')
       .update(animeUpdates)
       .eq('id', animeId)
+      .select()
 
     if (animeUpdateError) {
       console.error('Error updating anime details:', animeUpdateError)

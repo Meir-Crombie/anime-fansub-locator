@@ -217,6 +217,7 @@ export default function DashboardClient({
       total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
     })
     // Update anime details (cover image, genres, synopsis, AND title_en) if changed
+    let animeUpdateSuccess = true
     if (currentTranslation?.animes) {
       const coverChanged = editForm.cover_image_url !== (currentTranslation.animes.cover_image_url ?? '')
       const genresChanged = JSON.stringify(editForm.genres) !== JSON.stringify(currentTranslation.animes.genres ?? [])
@@ -224,13 +225,17 @@ export default function DashboardClient({
       const titleEnChanged = editForm.title_en !== (currentTranslation.animes.title_en ?? '')
       
       if (coverChanged || genresChanged || synopsisChanged || titleEnChanged) {
-        await updateAnimeDetails({
+        const animeResult = await updateAnimeDetails({
           anime_id: currentTranslation.animes.id,
           cover_image_url: editForm.cover_image_url,
           genres: editForm.genres,
           synopsis: editForm.synopsis,
-          title_en: editForm.title_en, // שליחת השם המעודכן לפונקציה השרתית
+          title_en: editForm.title_en,
         })
+        if (animeResult.error) {
+          console.error('Failed to update anime details:', animeResult.error)
+          animeUpdateSuccess = false
+        }
       }
     }
     if (!result.error) {
@@ -250,10 +255,13 @@ export default function DashboardClient({
                 }],
                 animes: t.animes ? { 
                   ...t.animes, 
-                  cover_image_url: editForm.cover_image_url || null, 
-                  genres: editForm.genres, 
-                  synopsis: editForm.synopsis || null,
-                  title_en: editForm.title_en // עדכון בתצוגה באופן מיידי
+                  // Only update anime fields in local state if the server save succeeded
+                  ...(animeUpdateSuccess ? {
+                    cover_image_url: editForm.cover_image_url || null, 
+                    genres: editForm.genres, 
+                    synopsis: editForm.synopsis || null,
+                    title_en: editForm.title_en,
+                  } : {}),
                 } : null,
               }
             : t
