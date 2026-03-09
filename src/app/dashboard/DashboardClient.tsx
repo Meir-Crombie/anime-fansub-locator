@@ -131,7 +131,10 @@ export default function DashboardClient({
   // Inline translation edit state (added title_en)
   const [editingTranslationId, setEditingTranslationId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({
-    status: '', platform: '', direct_link: '', notes: '',
+    status: '',
+    platform: '',
+    direct_link: '',
+    notes: '',
     translated_episodes: 0, total_episodes: '',
     cover_image_url: '', genres: [] as string[], synopsis: '', title_en: '',
     credits: '', episode_range: '', quality: '',
@@ -182,7 +185,7 @@ export default function DashboardClient({
       cover_image_url: t.animes?.cover_image_url ?? '',
       genres: t.animes?.genres ?? [],
       synopsis: t.animes?.synopsis ?? '',
-      title_en: t.animes?.title_en ?? '', // טעינת השם באנגלית
+      title_en: t.animes?.title_en ?? '',
       credits,
       episode_range: episodeRange,
       quality,

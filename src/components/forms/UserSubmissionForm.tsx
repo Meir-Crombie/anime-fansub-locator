@@ -280,8 +280,6 @@ export default function UserSubmissionForm() {
                 />
                 {errors.translation_url && <FieldError message={errors.translation_url} />}
               </div>
-
-              {/* Platform — icon grid */}
               <div>
                 <SectionLabel label="פלטפורמה" required />
                 <div className="grid grid-cols-3 md:grid-cols-5 gap-2">

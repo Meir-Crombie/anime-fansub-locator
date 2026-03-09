@@ -9,13 +9,13 @@ export const groupManagerFormSchema = z.object({
   genres: z.array(z.string()).optional(),
   credits: z.string().max(500).optional(),
   status: z.enum(['ongoing', 'completed', 'dropped', 'paused']),
-  platforms: z
-    .array(z.enum(['website', 'telegram', 'discord', 'youtube']))
-    .min(1, 'יש לבחור לפחות פלטפורמה אחת'),
-  direct_link: z
-    .string()
-    .url('קישור לא תקין')
-    .refine((v) => v.startsWith('https://'), 'הקישור חייב להתחיל ב-https://'),
+  translations: z.array(
+    z.object({
+      platform: z.enum(['website', 'telegram', 'discord', 'youtube']),
+      direct_link: z.string().url('קישור לא תקין').refine((v) => v.startsWith('https://'), 'הקישור חייב להתחיל ב-https://'),
+      secondary_link: z.string().url('קישור נוסף לא תקין').refine((v) => v.startsWith('https://'), 'הקישור חייב להתחיל ב-https://').optional().or(z.literal('')),
+    })
+  ).min(1, 'יש לבחור לפחות פלטפורמה אחת'),
   episode_range: z.string().max(100).optional(),
   notes: z.string().max(1000).optional(),
   release_date: z.string().optional(),

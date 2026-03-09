@@ -242,24 +242,24 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
   const dbStatus = parsed.data.status === 'paused' ? 'dropped' : parsed.data.status
   const validStatus = dbStatus as 'ongoing' | 'completed' | 'dropped'
 
-  // Upsert a record for each selected platform
-  const upsertPromises = parsed.data.platforms.map((platform) => {
+  // Upsert a record for each translation entry
+  const upsertPromises = (parsed.data.translations ?? []).map((t: { platform: string; direct_link: string; secondary_link?: string }) => {
     return supabase
       .from('translations')
       .upsert({
         anime_id: animeId,
         fansub_id: fansubId,
         status: validStatus,
-        platform: platform,
-        direct_link: parsed.data.direct_link,
-        notes: combinedNotes,
+        platform: t.platform as 'website' | 'telegram' | 'discord' | 'youtube',
+        direct_link: t.direct_link,
+        notes: combinedNotes ?? null,
       }, {
         onConflict: 'anime_id,fansub_id,platform',
       })
   })
 
   const results = await Promise.all(upsertPromises)
-  const translationError = results.find(r => r.error)?.error
+  const translationError = results.find((r: any) => r.error)?.error
   if (translationError) throw new Error(translationError.message)
 
   revalidatePath(`/anime/${animeId}`)

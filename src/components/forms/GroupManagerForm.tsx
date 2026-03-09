@@ -1,3 +1,5 @@
+// PlatformValue removed, use TranslationValue
+                  next.push({ platform: 'website', direct_link: '', secondary_link: '' })
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -36,7 +38,11 @@ const QUALITY_OPTIONS = [
   { value: 'dvd', label: 'DVD' },
 ]
 
-type PlatformValue = GroupManagerFormValues['platforms'][number]
+type TranslationValue = {
+  platform: 'website' | 'telegram' | 'discord' | 'youtube'
+  direct_link: string
+  secondary_link?: string
+}
 
 interface GroupManagerFormProps {
   fansubId: string
@@ -45,7 +51,7 @@ interface GroupManagerFormProps {
 
 export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerFormProps) {
   const [formData, setFormData] = useState<Partial<GroupManagerFormValues>>({
-    platforms: [],
+    translations: [],
     genres: [],
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -156,11 +162,7 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
   }
 
   function togglePlatform(platform: PlatformValue) {
-    const current = formData.platforms ?? []
-    const next = current.includes(platform)
-      ? current.filter((p) => p !== platform)
-      : [...current, platform]
-    updateField('platforms', next)
+    // Removed: function togglePlatform
   }
 
   function toggleGenre(genre: string) {
@@ -407,47 +409,75 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
 
           {/* Platforms — required (at least 1) */}
           <div>
-            <SectionLabel label="פלטפורמות" required />
-            <div className="flex flex-wrap gap-2">
-              {PLATFORM_OPTIONS.map((opt) => {
-                const selected = (formData.platforms ?? []).includes(opt.value)
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => togglePlatform(opt.value)}
-                    className="transition-all duration-200 cursor-pointer font-heebo"
-                    style={{
-                      padding: '0.45rem 1rem',
-                      borderRadius: '999px',
-                      border: `1.5px solid ${selected ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
-                      background: selected ? 'hsl(var(--primary) / 0.15)' : 'transparent',
-                      color: selected ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
-                      fontSize: '0.88rem',
-                      fontWeight: 500,
+            <SectionLabel label="פלטפורמות וקישורים" required />
+            <div className="space-y-4">
+              {(formData.translations ?? []).map((t, idx) => (
+                <div key={idx} className="flex flex-col md:flex-row gap-2 items-center border border-border rounded-xl p-3 bg-muted/10">
+                  <select
+                    value={t.platform}
+                    onChange={e => {
+                      const next = [...(formData.translations ?? [])]
+                      next[idx].platform = e.target.value as TranslationValue['platform']
+                      updateField('translations', next)
                     }}
+                    className="form-input-base w-32"
                   >
-                    {opt.icon} {opt.label}
-                  </button>
-                )
-              })}
+                    <option value="">בחר פלטפורמה...</option>
+                    {PLATFORM_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="url"
+                    value={t.direct_link ?? ''}
+                    onChange={e => {
+                      const next = [...(formData.translations ?? [])]
+                      next[idx].direct_link = e.target.value
+                      updateField('translations', next)
+                    }}
+                    placeholder="קישור ראשי (https://...)"
+                    className="form-input-base w-full"
+                    style={{ direction: 'ltr', textAlign: 'left' }}
+                  />
+                  <input
+                    type="url"
+                    value={t.secondary_link ?? ''}
+                    onChange={e => {
+                      const next = [...(formData.translations ?? [])]
+                      next[idx].secondary_link = e.target.value
+                      updateField('translations', next)
+                    }}
+                    placeholder="קישור נוסף (אופציונלי)"
+                    className="form-input-base w-full"
+                    style={{ direction: 'ltr', textAlign: 'left' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = [...(formData.translations ?? [])]
+                      next.splice(idx, 1)
+                      updateField('translations', next)
+                    }}
+                    className="bg-destructive text-white rounded-lg px-3 py-1 text-xs font-bold"
+                  >הסר</button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  updateField('translations', [
+                    ...(Array.isArray(formData.translations) ? formData.translations : []),
+                    { platform: 'website', direct_link: '', secondary_link: '' }
+                  ]);
+                }}
+                className="bg-primary text-white rounded-lg px-4 py-2 font-bold"
+              >הוסף פלטפורמה</button>
             </div>
-            {errors.platforms && <FieldError message={errors.platforms} />}
+            {errors.translations && <FieldError message={errors.translations} />}
           </div>
 
           {/* Direct Link — required */}
-          <div>
-            <SectionLabel label="קישור ישיר" required />
-            <input
-              type="url"
-              value={formData.direct_link ?? ''}
-              onChange={(e) => updateField('direct_link', e.target.value)}
-              placeholder="https://..."
-              className={cn('form-input-base', errors.direct_link && 'form-input-error')}
-              style={{ direction: 'ltr', textAlign: 'left' }}
-            />
-            {errors.direct_link && <FieldError message={errors.direct_link} />}
-          </div>
+          {/* Deprecated: direct_link field. Removed. */}
 
           {/* Episode Range — optional */}
           <div>
