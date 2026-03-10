@@ -252,6 +252,7 @@ export async function submitManagerTranslation(formData: Record<string, unknown>
         status: validStatus,
         platform: t.platform as 'website' | 'telegram' | 'discord' | 'youtube',
         direct_link: t.direct_link,
+        secondary_link: t.secondary_link || null,
         notes: combinedNotes ?? null,
       }, {
         onConflict: 'anime_id,fansub_id,platform',
@@ -274,6 +275,7 @@ const updateTranslationSchema = z.object({
   status: z.enum(['ongoing', 'completed', 'dropped']),
   platform: z.enum(['website', 'telegram', 'discord', 'youtube']),
   direct_link: z.string().url(),
+  secondary_link: z.string().url().optional().nullable().or(z.literal('')),
   notes: z.string().max(500).optional().nullable(),
 })
 
@@ -282,6 +284,7 @@ export async function updateTranslation(data: {
   status: string
   platform: string
   direct_link: string
+  secondary_link?: string | null
   notes?: string | null
 }) {
   const parsed = updateTranslationSchema.safeParse(data)
@@ -306,6 +309,7 @@ export async function updateTranslation(data: {
       status: parsed.data.status,
       platform: parsed.data.platform,
       direct_link: parsed.data.direct_link,
+      secondary_link: parsed.data.secondary_link || null,
       notes: parsed.data.notes ?? null,
     })
     .eq('id', parsed.data.id)

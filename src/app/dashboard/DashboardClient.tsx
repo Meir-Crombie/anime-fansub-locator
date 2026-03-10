@@ -28,6 +28,7 @@ type TranslationRow = {
   status: 'ongoing' | 'completed' | 'dropped'
   platform: 'website' | 'telegram' | 'discord' | 'youtube'
   direct_link: string
+  secondary_link: string | null
   notes: string | null
   updated_at: string
   episode_progress: { translated_episodes: number; total_episodes: number | null }[] | null
@@ -134,6 +135,7 @@ export default function DashboardClient({
     status: '',
     platform: '',
     direct_link: '',
+    secondary_link: '',
     notes: '',
     translated_episodes: 0, total_episodes: '',
     cover_image_url: '', genres: [] as string[], synopsis: '', title_en: '',
@@ -179,6 +181,7 @@ export default function DashboardClient({
       status: t.status,
       platform: t.platform,
       direct_link: t.direct_link,
+      secondary_link: t.secondary_link ?? '',
       notes: otherParts.join(' | '),
       translated_episodes: progress?.translated_episodes ?? 0,
       total_episodes: progress?.total_episodes?.toString() ?? '',
@@ -211,6 +214,7 @@ export default function DashboardClient({
         status: editForm.status,
         platform: editForm.platform,
         direct_link: editForm.direct_link,
+        secondary_link: editForm.secondary_link || null,
         notes: combinedNotes,
       })
       if (result.error) {
@@ -232,7 +236,7 @@ export default function DashboardClient({
         const genresChanged = JSON.stringify(editForm.genres) !== JSON.stringify(currentTranslation.animes.genres ?? [])
         const synopsisChanged = editForm.synopsis !== (currentTranslation.animes.synopsis ?? '')
         const titleEnChanged = editForm.title_en !== (currentTranslation.animes.title_en ?? '')
-        
+
         if (coverChanged || genresChanged || synopsisChanged || titleEnChanged) {
           const animeResult = await updateAnimeDetails({
             anime_id: currentTranslation.animes.id,
@@ -256,27 +260,28 @@ export default function DashboardClient({
         [selectedGroupId]: prev[selectedGroupId].map((t) =>
           t.id === editingTranslationId
             ? {
-                ...t,
-                ...(!result.error ? {
-                  status: editForm.status as TranslationRow['status'],
-                  platform: editForm.platform as TranslationRow['platform'],
-                  direct_link: editForm.direct_link,
-                  notes: combinedNotes,
-                  episode_progress: [{
-                    translated_episodes: editForm.translated_episodes,
-                    total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
-                  }],
+              ...t,
+              ...(!result.error ? {
+                status: editForm.status as TranslationRow['status'],
+                platform: editForm.platform as TranslationRow['platform'],
+                direct_link: editForm.direct_link,
+                secondary_link: editForm.secondary_link || null,
+                notes: combinedNotes,
+                episode_progress: [{
+                  translated_episodes: editForm.translated_episodes,
+                  total_episodes: (totalEp !== null && !isNaN(totalEp)) ? totalEp : null,
+                }],
+              } : {}),
+              animes: t.animes ? {
+                ...t.animes,
+                ...(animeUpdated ? {
+                  cover_image_url: editForm.cover_image_url || null,
+                  genres: editForm.genres,
+                  synopsis: editForm.synopsis || null,
+                  title_en: editForm.title_en,
                 } : {}),
-                animes: t.animes ? { 
-                  ...t.animes, 
-                  ...(animeUpdated ? {
-                    cover_image_url: editForm.cover_image_url || null, 
-                    genres: editForm.genres, 
-                    synopsis: editForm.synopsis || null,
-                    title_en: editForm.title_en,
-                  } : {}),
-                } : null,
-              }
+              } : null,
+            }
             : t
         ),
       }))
@@ -638,11 +643,10 @@ export default function DashboardClient({
                                       ? p.genres.filter((g) => g !== genre.value)
                                       : [...p.genres, genre.value],
                                   }))}
-                                  className={`px-2 py-0.5 rounded-full text-[11px] border transition-colors cursor-pointer ${
-                                    selected
-                                      ? 'border-primary bg-primary/15 text-primary'
-                                      : 'border-border text-muted-foreground hover:border-primary/50'
-                                  }`}
+                                  className={`px-2 py-0.5 rounded-full text-[11px] border transition-colors cursor-pointer ${selected
+                                    ? 'border-primary bg-primary/15 text-primary'
+                                    : 'border-border text-muted-foreground hover:border-primary/50'
+                                    }`}
                                 >
                                   {genre.label}
                                 </button>
@@ -679,15 +683,28 @@ export default function DashboardClient({
                             </Select>
                           </div>
                         </div>
-                        {/* Direct link */}
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium">קישור ישיר</label>
-                          <Input
-                            type="url"
-                            dir="ltr"
-                            value={editForm.direct_link}
-                            onChange={(e) => setEditForm((p) => ({ ...p, direct_link: e.target.value }))}
-                          />
+                        {/* Direct & Secondary links */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium">קישור ראשי</label>
+                            <Input
+                              type="url"
+                              dir="ltr"
+                              placeholder="https://..."
+                              value={editForm.direct_link}
+                              onChange={(e) => setEditForm((p) => ({ ...p, direct_link: e.target.value }))}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium">קישור נוסף (אופציונלי)</label>
+                            <Input
+                              type="url"
+                              dir="ltr"
+                              placeholder="https://..."
+                              value={editForm.secondary_link}
+                              onChange={(e) => setEditForm((p) => ({ ...p, secondary_link: e.target.value }))}
+                            />
+                          </div>
                         </div>
                         {/* Episodes */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -881,11 +898,10 @@ export default function DashboardClient({
                       {[1, 2, 3, 4, 5].map((star) => (
                         <Star
                           key={star}
-                          className={`h-3.5 w-3.5 ${
-                            star <= r.score
-                              ? 'text-yellow-500 fill-yellow-500'
-                              : 'text-muted-foreground'
-                          }`}
+                          className={`h-3.5 w-3.5 ${star <= r.score
+                            ? 'text-yellow-500 fill-yellow-500'
+                            : 'text-muted-foreground'
+                            }`}
                         />
                       ))}
                     </div>

@@ -18,6 +18,7 @@ interface TranslationRow {
   status: string
   platform: string
   direct_link: string
+  secondary_link: string | null
   fansub_groups: { name: string } | null
 }
 

@@ -1,5 +1,3 @@
-// PlatformValue removed, use TranslationValue
-next.push({ platform: 'website', direct_link: '', secondary_link: '' })
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -161,9 +159,6 @@ export default function GroupManagerForm({ fansubId, fansubName }: GroupManagerF
     })
   }
 
-  function togglePlatform(platform: PlatformValue) {
-    // Removed: function togglePlatform
-  }
 
   function toggleGenre(genre: string) {
     const current = formData.genres ?? []

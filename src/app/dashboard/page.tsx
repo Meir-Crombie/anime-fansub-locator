@@ -73,6 +73,7 @@ export default async function DashboardPage() {
     status: 'ongoing' | 'completed' | 'dropped'
     platform: 'website' | 'telegram' | 'discord' | 'youtube'
     direct_link: string
+    secondary_link: string | null
     notes: string | null
     updated_at: string
     episode_progress: { translated_episodes: number; total_episodes: number | null; last_episode_at: string | null }[] | null
